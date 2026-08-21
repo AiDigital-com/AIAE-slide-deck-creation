@@ -1,0 +1,151 @@
+/*
+ * Elevate design tokens.
+ * No component CSS may hard-code colors or raw px; use the semantic aliases below.
+ */
+
+:root {
+    /* Raw HSL tokens */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 4%;
+    --primary: 239 100% 43%;
+    --primary-hover: 239 100% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 78% 98%;
+    --accent: 237 76% 94%;
+    --muted-foreground: 0 0% 54%;
+    --label-muted: 226 25% 68%;
+    --header-text: 230 17% 22%;
+    --border: 237 76% 94%;
+    --ring: 239 100% 43%;
+
+    --status-success: 134 100% 30%;
+    --status-info: 234 100% 43%;
+    --status-warning: 52 100% 37%;
+    --status-draft: 0 0% 28%;
+    --status-error: 0 72% 45%;
+
+    /* Status surfaces, borders, and filled-control accents */
+    --status-success-strong: 140 61% 30%;
+    --status-success-surface: 137 39% 93%;
+    --status-success-border: 137 39% 82%;
+    --status-error-strong: 3 71% 41%;
+    --status-error-surface: 6 83% 95%;
+    --status-warning-strong: 29 71% 41%;
+    --status-warning-strong-hover: 29 70% 34%;
+    --status-warning-surface: 46 100% 94%;
+    --status-warning-surface-alt: 35 87% 94%;
+    --status-warning-border: 46 71% 80%;
+    --status-warning-text: 51 16% 32%;
+
+    /* Warm-neutral scale */
+    --neutral-100: 0 0% 96%;
+    --neutral-200: 0 0% 93%;
+    --neutral-300: 0 0% 80%;
+    --neutral-500: 0 0% 40%;
+    --neutral-700: 0 0% 27%;
+    --neutral-900: 0 0% 12%;
+
+    /* Cool-neutral scale used by the triage and review surfaces */
+    --cool-050: 240 38% 97%;
+    --cool-100: 214 26% 95%;
+    --cool-200: 212 17% 85%;
+    --cool-500: 220 9% 46%;
+    --accent-soft: 233 100% 97%;
+    --accent-link: 217 78% 46%;
+
+    --chart-cyan: 190 65% 54%;
+    --chart-lime: 76 75% 60%;
+    --chart-purple: 263 47% 58%;
+    --chart-pink: 319 75% 77%;
+    --chart-grey: 0 0% 72%;
+    --chart-sky: 219 74% 52%;
+    --chart-magenta: 346 69% 52%;
+
+    /* Spacing scale */
+    --space-1: 0.25rem;
+    --space-1-5: 0.375rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-10: 2.5rem;
+
+    /* Radii */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.625rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 0.75rem;
+    --radius-full: 999rem;
+
+    /* Text sizes */
+    --text-badge: 0.6875rem;
+    --text-pill: 0.75rem;
+    --text-body: 0.8125rem;
+    --text-table-head: 0.875rem;
+    --text-subhead: 1rem;
+    --text-section: 1.125rem;
+    --text-page-title: 2rem;
+
+    /* Layout/control scale */
+    --content-max-width: 79.0625rem;
+    --control-height: 2.5rem;
+    --border-hairline: 0.0625rem;
+
+    /* Aliases kept for older component styles that reference these names */
+    --text-sm: var(--text-pill);
+    --text-base: var(--text-body);
+    --text-lg: var(--text-subhead);
+    --text-xl: var(--text-section);
+
+    --surface-default: hsl(var(--background));
+    --surface-muted: hsl(var(--secondary));
+    --surface-elevated: hsl(var(--background));
+    --surface-accent: hsl(var(--accent));
+    --surface-accent-soft: hsl(var(--accent-soft));
+    --surface-subtle: hsl(var(--cool-050));
+    --surface-neutral: hsl(var(--neutral-100));
+    --surface-neutral-strong: hsl(var(--cool-100));
+    --surface-success: hsl(var(--status-success-surface));
+    --surface-warning: hsl(var(--status-warning-surface));
+    --surface-warning-alt: hsl(var(--status-warning-surface-alt));
+    --surface-error: hsl(var(--status-error-surface));
+
+    --text-default: hsl(var(--foreground));
+    --text-muted: hsl(var(--muted-foreground));
+    --text-label: hsl(var(--label-muted));
+    --text-heading: hsl(var(--header-text));
+    --text-on-accent: hsl(var(--primary-foreground));
+    --text-inverse: hsl(var(--primary-foreground));
+    --text-strong: hsl(var(--neutral-900));
+    --text-secondary: hsl(var(--neutral-700));
+    --text-tertiary: hsl(var(--neutral-500));
+    --text-link: hsl(var(--accent-link));
+    --text-success: hsl(var(--status-success-strong));
+    --text-error: hsl(var(--status-error-strong));
+    --text-warning: hsl(var(--status-warning-text));
+
+    --accent-primary: hsl(var(--primary));
+    --accent-primary-hover: hsl(var(--primary-hover));
+    --accent-danger: hsl(var(--status-error));
+    --accent-success: hsl(var(--status-success-strong));
+    --accent-warning: hsl(var(--status-warning-strong));
+    --accent-warning-hover: hsl(var(--status-warning-strong-hover));
+    --accent-neutral: hsl(var(--cool-500));
+
+    --border-default: hsl(var(--border));
+    --border-strong: hsl(var(--primary) / 22%);
+    --border-subtle: hsl(var(--neutral-200));
+    --border-neutral: hsl(var(--neutral-300));
+    --border-cool: hsl(var(--cool-200));
+    --border-success: hsl(var(--status-success-border));
+    --border-warning: hsl(var(--status-warning-border));
+    --focus-ring: hsl(var(--ring) / 40%);
+    --shadow-soft: 0 0.125rem 0.5rem hsl(var(--foreground) / 6%);
+    --shadow-card: 0 0.0625rem 0.125rem hsl(var(--foreground) / 4%), 0 0.0625rem 0.1875rem hsl(var(--foreground) / 6%);
+    --shadow-card-hover: 0 0.375rem 1rem hsl(var(--primary) / 12%), 0 0.125rem 0.25rem hsl(var(--foreground) / 6%);
+    --shadow-header: 0 0.0625rem 0 hsl(var(--border)), 0 0.0625rem 0.5rem hsl(var(--foreground) / 3%);
+
+    --gradient-brand: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(263 60% 52%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--secondary)) 100%);
+}

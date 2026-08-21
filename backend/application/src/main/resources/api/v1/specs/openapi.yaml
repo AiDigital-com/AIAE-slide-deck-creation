@@ -1,0 +1,1803 @@
+openapi: 3.0.3
+info:
+  title: Strategy & Planning API
+  version: 0.1.0
+  description: |
+    Strategy & Planning toolkit API. Provides endpoints for the Case Study Builder,
+    Category Analysis Builder, and RFP Outline Generator tools. Authentication via Clerk SSO (Bearer JWT).
+
+servers:
+  - url: /api/v1
+    description: V1 base path (DOCUMENTATION ONLY — the openapi-generator-maven-plugin
+      does NOT prepend this to generated Spring routes. Path keys below carry the
+      `/api/v1/` prefix verbatim. See canonical-openapi-rules.md → "/api/v1 prefix").
+
+security:
+  - bearerAuth: [ ]
+
+tags:
+  - name: auth
+    description: Authentication bootstrap
+  - name: CaseStudies
+    description: Case Study Builder — create and manage case studies for Google Slides generation
+  - name: CategoryAnalyses
+    description: Category Analysis Builder — create and manage 3-5 slide category analyses for Google Slides generation
+  - name: RndRequests
+    description: RnD Request Triage — triage growth-team feature/product requests by deal size and draft a relay-ready response
+  - name: RfpOutlines
+    description: RFP Outline Generator — draft a point-of-view and response deck outline from an uploaded RFP, and export it to Google Docs
+
+paths:
+  /api/v1/auth/me:
+    get:
+      tags: [ auth ]
+      operationId: getCurrentUser
+      summary: Returns the authenticated user (Clerk SSO)
+      description: Returns the Clerk-authenticated user identity used by the SPA bootstrap.
+      responses:
+        "200":
+          description: Authenticated user payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserV1"
+              examples:
+                demo:
+                  value:
+                    user_id: "user_123"
+                    email: "demo-user@example.com"
+                    full_name: "Demo User"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while resolving authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/case-studies:
+    get:
+      tags: [ CaseStudies ]
+      operationId: listCaseStudies
+      summary: List all case studies for the authenticated user
+      description: Returns all case studies created by the authenticated user, ordered by creation date descending.
+      security: [ { bearerAuth: [ ] } ]
+      responses:
+        "200":
+          description: List of case study summaries for the authenticated user.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Ordered list of case study summaries.
+                items:
+                  $ref: "#/components/schemas/CaseStudySummaryV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while listing case studies.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+    post:
+      tags: [ CaseStudies ]
+      operationId: createCaseStudy
+      summary: Create a new case study and generate its Google Slides deck
+      description: |
+        Creates a new case study with the provided form fields and immediately generates a Google
+        Slides deck by copying the tokenized master template into the user's Drive and filling all
+        template tokens. Requires the user to be signed in with Google (via Clerk) with Drive and
+        Slides access. On success the record is persisted with status GENERATED and the deck URL
+        is returned in slidesUrl.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Case study form fields. Title is required; all other fields are optional pre-fill.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCaseStudyRequestV1"
+      responses:
+        "201":
+          description: Case study created and its Google Slides deck generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseStudyV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the case study.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: >-
+            Google deck generation failed — the user is not connected to Google, has not granted
+            Drive & Slides access, or a Google API call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/case-studies/drafts:
+    post:
+      tags: [ CaseStudies ]
+      operationId: draftCaseStudy
+      summary: AI-draft case study fields from uploaded source documents
+      description: |
+        Accepts up to 10 source documents (PDF, PowerPoint, Excel, or CSV), extracts their
+        readable content — including tabular data from Excel workbooks — and uses the AI
+        drafting engine to pre-fill every case study form field. The result is meant to be
+        reviewed and edited by the user before submission; metrics and quotes are AI-extracted
+        and must be verified against the source documents.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Source documents to draft from. Between 1 and 10 files.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              description: Multipart payload carrying the uploaded source documents.
+              required: [ files ]
+              properties:
+                files:
+                  type: array
+                  description: Uploaded source documents (PDF, PPTX, PPT, XLSX, XLS, or CSV). Maximum 10 files.
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                    format: binary
+                    description: One uploaded source document.
+      responses:
+        "200":
+          description: Drafted case study fields for review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseStudyDraftV1"
+        "400":
+          description: Request validation failed (no files, more than 10 files, or an unsupported/unreadable file).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured or the drafting call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while drafting the case study.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/case-studies/{id}:
+    get:
+      tags: [ CaseStudies ]
+      operationId: getCaseStudy
+      summary: Get a case study by ID
+      description: Returns the full detail of a case study belonging to the authenticated user.
+      security: [ { bearerAuth: [ ] } ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the case study.
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Case study detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseStudyV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "404":
+          description: Case study not found or does not belong to the authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while retrieving the case study.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/rfp-outlines:
+    get:
+      tags: [ RfpOutlines ]
+      operationId: listRfpOutlines
+      summary: List all RFP outlines for the authenticated user
+      description: Returns all RFP outlines created by the authenticated user, ordered by creation date descending.
+      security: [ { bearerAuth: [ ] } ]
+      responses:
+        "200":
+          description: List of RFP outline summaries for the authenticated user.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Ordered list of RFP outline summaries.
+                items:
+                  $ref: "#/components/schemas/RfpOutlineSummaryV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while listing RFP outlines.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+    post:
+      tags: [ RfpOutlines ]
+      operationId: createRfpOutline
+      summary: Create a new RFP outline and export it to Google Docs
+      description: |
+        Creates a new RFP outline with the provided reviewed fields and immediately generates a Google Doc
+        by copying the tokenized master template into the user's Drive and filling all template
+        tokens. Requires the user to be signed in with Google (via Clerk) with Drive and Docs
+        access. On success the record is persisted with status SAVED and the doc URL is returned
+        in docUrl.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: RFP outline fields. Title is required; all other fields are optional pre-fill.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRfpOutlineRequestV1"
+      responses:
+        "201":
+          description: RFP outline created and its Google Doc generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RfpOutlineV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the RFP outline.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: >-
+            Google doc generation failed — the user is not connected to Google, has not granted
+            Drive & Docs access, or a Google API call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/rfp-outlines/drafts:
+    post:
+      tags: [ RfpOutlines ]
+      operationId: draftRfpOutline
+      summary: AI-draft a POV and deck outline from an uploaded RFP
+      description: |
+        Accepts up to 10 source documents (PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, or CSV), extracts
+        their readable content, and uses the AI drafting engine — together with optional
+        supplementary notes — to draft a succinct POV (challenge, opportunity, solution, outcome)
+        and a slide-by-slide response deck outline. The result is meant to be reviewed and edited
+        by the user before submission.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Source documents to draft from (1-10 files), plus optional supplementary notes.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              description: Multipart payload carrying the uploaded RFP documents and optional notes.
+              required: [ files ]
+              properties:
+                files:
+                  type: array
+                  description: Uploaded RFP documents (PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, or CSV). Maximum 10 files.
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                    format: binary
+                    description: One uploaded RFP document.
+                notes:
+                  type: string
+                  description: Optional free-text supplementary context alongside the uploaded RFP.
+      responses:
+        "200":
+          description: Drafted POV narrative and deck outline for review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RfpOutlineDraftV1"
+        "400":
+          description: Request validation failed (no files, more than 10 files, or an unsupported/unreadable file).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured or the drafting call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while drafting the RFP outline.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/rfp-outlines/{id}:
+    get:
+      tags: [ RfpOutlines ]
+      operationId: getRfpOutline
+      summary: Get an RFP outline by ID
+      description: Returns the full detail of an RFP outline belonging to the authenticated user.
+      security: [ { bearerAuth: [ ] } ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the RFP outline.
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: RFP outline detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RfpOutlineV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "404":
+          description: RFP outline not found or does not belong to the authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while retrieving the RFP outline.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses:
+    get:
+      tags: [ CategoryAnalyses ]
+      operationId: listCategoryAnalyses
+      summary: List all category analyses for the authenticated user
+      description: Returns all category analyses created by the authenticated user, ordered by creation date descending.
+      security: [ { bearerAuth: [ ] } ]
+      responses:
+        "200":
+          description: List of category analysis summaries for the authenticated user.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Ordered list of category analysis summaries.
+                items:
+                  $ref: "#/components/schemas/CategoryAnalysisSummaryV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while listing category analyses.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+    post:
+      tags: [ CategoryAnalyses ]
+      operationId: createCategoryAnalysis
+      summary: Create and submit a new category analysis
+      description: |
+        Creates a new category analysis with the provided form fields.
+        The record is persisted with status SUBMITTED, indicating it is ready for Google Slides
+        generation once OAuth is configured. Outputs a 3-5 slide deck narrative.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Category analysis form fields. Title is required; all other fields are optional.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryAnalysisRequestV1"
+      responses:
+        "201":
+          description: Category analysis created and submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryAnalysisV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the category analysis.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/{id}:
+    get:
+      tags: [ CategoryAnalyses ]
+      operationId: getCategoryAnalysis
+      summary: Get a category analysis by ID
+      description: Returns the full detail of a category analysis belonging to the authenticated user.
+      security: [ { bearerAuth: [ ] } ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the category analysis.
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Category analysis detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryAnalysisV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "404":
+          description: Category analysis not found or does not belong to the authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while retrieving the category analysis.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/standard-connections:
+    get:
+      tags: [ CategoryAnalyses ]
+      operationId: getStandardConnections
+      summary: Report connection status for the Standard Category Analysis generator
+      description: |
+        Reports whether the AI drafting engine is configured (OpenAI API key present) and whether
+        the authenticated user's Google account grants Drive/Slides access via Clerk SSO.
+      security: [ { bearerAuth: [ ] } ]
+      responses:
+        "200":
+          description: Connection status for the standard deck generator.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardConnectionsV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while checking connections.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/standard-drafts:
+    post:
+      tags: [ CategoryAnalyses ]
+      operationId: draftStandardCategoryAnalysis
+      summary: AI-draft all fields of a Standard Category Analysis
+      description: |
+        Uses the AI drafting engine to produce every text field of the Standard Category Analysis
+        template (5 slides, ~50 fields) from a short brief. The result is
+        meant to be reviewed and edited by the user before deck creation. Stats and sources are
+        AI-drafted and must be verified before client use.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Short brief for the analysis. Category and client name are required.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StandardDraftRequestV1"
+      responses:
+        "200":
+          description: Complete drafted field set for review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardDraftV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured or the drafting call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while drafting the analysis.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/standard-drafts/slide:
+    post:
+      tags: [ CategoryAnalyses ]
+      operationId: redraftStandardCategorySlide
+      summary: AI-redraft the fields of a single slide of a Standard Category Analysis
+      description: |
+        Re-drafts only the text fields of one slide of the
+        Standard Category Analysis template, using the original brief plus an optional per-slide
+        guidance note. The current values of the whole deck are supplied as context so the redraft
+        stays consistent with the slides the user is keeping. Only the returned slide's fields
+        should replace existing values; edits on other slides are preserved by the caller. Stats
+        and sources are AI-drafted and must be verified before client use.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Brief, slide number, optional per-slide note, and current deck values for context.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedraftSlideRequestV1"
+      responses:
+        "200":
+          description: Redrafted field set for the requested slide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardDraftV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured or the drafting call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while redrafting the slide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/standard-decks:
+    post:
+      tags: [ CategoryAnalyses ]
+      operationId: createStandardCategoryDeck
+      summary: Create the Standard Category Analysis deck in the user's Google Slides
+      description: |
+        Copies the master Standard Category Analysis template into the authenticated user's own
+        Google Drive, fills every template token with the reviewed field values, replaces the
+        image placeholders on slides 1-4 with friendly, on-vertical generated photographs, and
+        returns the new presentation's URL. Requires the user's Google account (via Clerk SSO) to
+        grant Drive and Slides access.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Reviewed field values for deck creation.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStandardDeckRequestV1"
+      responses:
+        "201":
+          description: Deck created in the user's Google Drive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryAnalysisV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: Google Drive/Slides access not granted or the Google API call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the deck.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/rnd-requests:
+    get:
+      tags: [ RndRequests ]
+      operationId: listRndRequests
+      summary: List all RnD requests for the authenticated user
+      description: Returns all triaged RnD requests created by the authenticated user, ordered by creation date descending.
+      security: [ { bearerAuth: [ ] } ]
+      responses:
+        "200":
+          description: List of RnD request summaries for the authenticated user.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Ordered list of RnD request summaries.
+                items:
+                  $ref: "#/components/schemas/RndRequestSummaryV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while listing RnD requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+    post:
+      tags: [ RndRequests ]
+      operationId: createRndRequest
+      summary: Create and triage a new RnD request
+      description: |
+        Creates a new RnD request and triages it immediately based on the deal size ("the buy").
+        When the buy meets or exceeds the escalation threshold (default $100,000) the request is
+        marked ESCALATE_TO_RND and a drafted RnD submission summary is returned. Otherwise it is
+        marked WORKAROUND and a positive, relay-ready workaround response is drafted — the tool
+        never produces a flat "no". Capability search across Slite/Asana is included in the
+        capability summary when those integrations are connected; until then the summary reports
+        they are not connected.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: RnD request fields. Title and buy amount are required.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRndRequestRequestV1"
+      responses:
+        "201":
+          description: RnD request created and triaged successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RndRequestV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the RnD request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/rnd-requests/{id}:
+    get:
+      tags: [ RndRequests ]
+      operationId: getRndRequest
+      summary: Get an RnD request by ID
+      description: Returns the full detail of a triaged RnD request belonging to the authenticated user.
+      security: [ { bearerAuth: [ ] } ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the RnD request.
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: RnD request detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RndRequestV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "404":
+          description: RnD request not found or does not belong to the authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while retrieving the RnD request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    GenerationStatusV1:
+      type: string
+      description: |
+        Lifecycle status of a generated document.
+        DRAFT — saved but not yet submitted for generation.
+        SUBMITTED — submitted for Google Slides generation.
+        GENERATED — Google Slides deck created in the user's Drive.
+      enum: [ DRAFT, SUBMITTED, GENERATED ]
+
+    GoogleConnectionStatusV1:
+      type: string
+      description: |
+        State of the caller's Google connection for Drive/Slides work.
+        NOT_CONNECTED — the user has not signed in with Google.
+        MISSING_SCOPES — signed in with Google, but the Drive/Slides scopes were not granted.
+        CONNECTED — Drive & Slides access granted.
+      enum: [ NOT_CONNECTED, MISSING_SCOPES, CONNECTED ]
+
+    UserV1:
+      type: object
+      additionalProperties: false
+      description: Authenticated user identity projected from Clerk JWT claims.
+      required: [ user_id, email ]
+      properties:
+        user_id: { type: string, description: "Clerk user id (sub/user_id claim)." }
+        email: { type: string, format: email, description: "Primary email address verified by Clerk." }
+        full_name: { type: string, description: "Display name assembled from Clerk profile claims." }
+
+    CaseStudySummaryV1:
+      type: object
+      additionalProperties: false
+      description: Lightweight summary of a case study for list views.
+      required: [ id, title, status, createdAt ]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier of the case study.
+        title:
+          type: string
+          description: Title of the case study.
+        clientName:
+          type: string
+          nullable: true
+          description: Name of the client featured in the case study.
+        industry:
+          type: string
+          nullable: true
+          description: Industry or sector of the client.
+        status:
+          description: Lifecycle state of the case study's deck generation.
+          allOf:
+            - $ref: "#/components/schemas/GenerationStatusV1"
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the case study was created.
+
+    CaseStudyV1:
+      type: object
+      additionalProperties: false
+      description: Full detail of a case study including all form fields and generation metadata.
+      required: [ id, title, status, createdAt ]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier of the case study.
+        title:
+          type: string
+          description: Title of the case study.
+        clientName:
+          type: string
+          nullable: true
+          description: Name of the client featured in the case study.
+        industry:
+          type: string
+          nullable: true
+          description: Industry or sector of the client.
+        challenge:
+          type: string
+          nullable: true
+          description: Description of the client's challenge or problem statement.
+        solution:
+          type: string
+          nullable: true
+          description: Description of the solution or approach delivered.
+        results:
+          type: string
+          nullable: true
+          description: Outcomes and results achieved for the client.
+        keyMetrics:
+          type: string
+          nullable: true
+          description: Key quantitative metrics demonstrating impact (e.g. "40% cost reduction, 2x pipeline growth").
+        timeline:
+          type: string
+          nullable: true
+          description: Project timeline or duration (e.g. "6 months", "Q1-Q3 2025").
+        testimonial:
+          type: string
+          nullable: true
+          description: Client quote or testimonial to feature in the deck.
+        sourceFileName:
+          type: string
+          nullable: true
+          description: Comma-separated names of the uploaded source files used for auto-drafting, if provided.
+        templateUrl:
+          type: string
+          nullable: true
+          description: URL of the Google Slides tokenized template used for generation.
+        slidesUrl:
+          type: string
+          nullable: true
+          description: URL of the generated Google Slides deck in the user's Drive, when created.
+        status:
+          description: Lifecycle state of the case study's deck generation.
+          allOf:
+            - $ref: "#/components/schemas/GenerationStatusV1"
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the case study was created.
+
+    CreateCaseStudyRequestV1:
+      type: object
+      additionalProperties: false
+      description: Request payload for creating a new case study. Title is required; all other fields are optional pre-fill.
+      required: [ title ]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Title of the case study.
+        clientName:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Name of the client featured in the case study.
+        industry:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Industry or sector of the client.
+        challenge:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Description of the client's challenge or problem statement.
+        solution:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Description of the solution or approach delivered.
+        results:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Outcomes and results achieved for the client.
+        keyMetrics:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Key quantitative metrics demonstrating impact.
+        timeline:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Project timeline or duration.
+        testimonial:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Client quote or testimonial.
+        sourceFileName:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Comma-separated names of the uploaded source files used for auto-drafting, if provided.
+
+    CaseStudyDraftV1:
+      type: object
+      additionalProperties: false
+      description: |
+        AI-drafted case study fields extracted from the uploaded source documents.
+        Every field is nullable — the model only fills what the documents support.
+      required: [ sourceFileNames ]
+      properties:
+        title:
+          type: string
+          nullable: true
+          description: Drafted title of the case study.
+        clientName:
+          type: string
+          nullable: true
+          description: Drafted client name.
+        industry:
+          type: string
+          nullable: true
+          description: Drafted industry or sector.
+        challenge:
+          type: string
+          nullable: true
+          description: Drafted challenge or problem statement.
+        solution:
+          type: string
+          nullable: true
+          description: Drafted solution or approach delivered.
+        results:
+          type: string
+          nullable: true
+          description: Drafted outcomes and results achieved.
+        keyMetrics:
+          type: string
+          nullable: true
+          description: Drafted key quantitative metrics, extracted from document data where available.
+        timeline:
+          type: string
+          nullable: true
+          description: Drafted project timeline or duration.
+        testimonial:
+          type: string
+          nullable: true
+          description: Drafted client quote or testimonial found in the documents.
+        sourceFileNames:
+          type: string
+          description: Comma-separated names of the uploaded source files the draft was produced from.
+
+    RfpOutlineSummaryV1:
+      type: object
+      additionalProperties: false
+      description: Lightweight summary of an RFP outline for list views.
+      required: [ id, title, status, createdAt ]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier of the RFP outline.
+        title:
+          type: string
+          description: Title of the RFP outline.
+        clientName:
+          type: string
+          nullable: true
+          description: Name of the client this RFP outline responds to.
+        industry:
+          type: string
+          nullable: true
+          description: Industry or sector of the client.
+        status:
+          description: Lifecycle state of the RFP outline's document generation.
+          allOf:
+            - $ref: "#/components/schemas/GenerationStatusV1"
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the RFP outline was created.
+
+    RfpOutlineV1:
+      type: object
+      additionalProperties: false
+      description: Full detail of an RFP outline including all fields and generation metadata.
+      required: [ id, title, status, createdAt ]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier of the RFP outline.
+        title:
+          type: string
+          description: Title of the RFP outline.
+        clientName:
+          type: string
+          nullable: true
+          description: Name of the client this RFP outline responds to.
+        industry:
+          type: string
+          nullable: true
+          description: Industry or sector of the client.
+        challenge:
+          type: string
+          nullable: true
+          description: The client's core challenge or need.
+        opportunity:
+          type: string
+          nullable: true
+          description: The differentiator or angle that makes AI Digital's approach compelling for this client.
+        solution:
+          type: string
+          nullable: true
+          description: The proposed strategic approach at a high level.
+        outcome:
+          type: string
+          nullable: true
+          description: What success looks like.
+        deckOutline:
+          type: string
+          nullable: true
+          description: Slide-by-slide breakdown of how the response deck should be structured.
+        supplementaryNotes:
+          type: string
+          nullable: true
+          description: Free-text context supplied alongside the uploaded RFP, if provided.
+        sourceFileName:
+          type: string
+          nullable: true
+          description: Comma-separated names of the uploaded source files used for auto-drafting, if provided.
+        docUrl:
+          type: string
+          nullable: true
+          description: URL of the generated Google Doc in the user's Drive, when created.
+        status:
+          description: Lifecycle state of the RFP outline's document generation.
+          allOf:
+            - $ref: "#/components/schemas/GenerationStatusV1"
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the RFP outline was created.
+
+    CreateRfpOutlineRequestV1:
+      type: object
+      additionalProperties: false
+      description: Request payload for creating a new RFP outline. Title is required; all other fields are optional pre-fill.
+      required: [ title ]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Title of the RFP outline.
+        clientName:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Name of the client this RFP outline responds to.
+        industry:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Industry or sector of the client.
+        challenge:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: The client's core challenge or need.
+        opportunity:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: The differentiator or angle that makes AI Digital's approach compelling for this client.
+        solution:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: The proposed strategic approach at a high level.
+        outcome:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: What success looks like.
+        deckOutline:
+          type: string
+          maxLength: 20000
+          nullable: true
+          description: Slide-by-slide breakdown of how the response deck should be structured.
+        supplementaryNotes:
+          type: string
+          maxLength: 20000
+          nullable: true
+          description: Free-text context supplied alongside the uploaded RFP, if provided.
+        sourceFileName:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Comma-separated names of the uploaded source files used for auto-drafting, if provided.
+
+    RfpOutlineDraftV1:
+      type: object
+      additionalProperties: false
+      description: |
+        AI-drafted RFP outline fields extracted from the uploaded RFP source documents (plus any
+        supplementary notes). Every field is nullable — the model only fills what the input supports.
+      required: [ sourceFileNames ]
+      properties:
+        title:
+          type: string
+          nullable: true
+          description: Drafted title of the RFP outline.
+        clientName:
+          type: string
+          nullable: true
+          description: Drafted client name.
+        industry:
+          type: string
+          nullable: true
+          description: Drafted industry or vertical.
+        challenge:
+          type: string
+          nullable: true
+          description: Drafted core challenge or need.
+        opportunity:
+          type: string
+          nullable: true
+          description: Drafted differentiator or angle for this client.
+        solution:
+          type: string
+          nullable: true
+          description: Drafted proposed strategic approach.
+        outcome:
+          type: string
+          nullable: true
+          description: Drafted description of what success looks like.
+        deckOutline:
+          type: string
+          nullable: true
+          description: Drafted slide-by-slide response deck outline.
+        sourceFileNames:
+          type: string
+          description: Comma-separated names of the uploaded source files the draft was produced from.
+
+    CategoryAnalysisSummaryV1:
+      type: object
+      additionalProperties: false
+      description: Lightweight summary of a category analysis for list views.
+      required: [ id, title, status, createdAt ]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier of the category analysis.
+        title:
+          type: string
+          description: Title of the category analysis.
+        category:
+          type: string
+          nullable: true
+          description: Market category or sector being analysed.
+        slidesUrl:
+          type: string
+          nullable: true
+          description: URL of the generated Google Slides presentation in the user's Drive, when created.
+        status:
+          description: Lifecycle state of the category analysis deck generation.
+          allOf:
+            - $ref: "#/components/schemas/GenerationStatusV1"
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the category analysis was created.
+
+    CategoryAnalysisV1:
+      type: object
+      additionalProperties: false
+      description: Full detail of a category analysis. Outputs a 3-5 slide deck narrative.
+      required: [ id, title, status, createdAt ]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier of the category analysis.
+        title:
+          type: string
+          description: Title of the category analysis.
+        category:
+          type: string
+          nullable: true
+          description: Market category or sector being analysed.
+        marketOverview:
+          type: string
+          nullable: true
+          description: High-level overview of the market landscape.
+        keyPlayers:
+          type: string
+          nullable: true
+          description: Key competitors or players in the category.
+        trends:
+          type: string
+          nullable: true
+          description: Emerging trends shaping the category.
+        opportunities:
+          type: string
+          nullable: true
+          description: Strategic opportunities identified within the category.
+        recommendations:
+          type: string
+          nullable: true
+          description: Recommended actions or strategies.
+        sourceFileNames:
+          type: string
+          nullable: true
+          description: Comma-separated names of uploaded source documents used for analysis.
+        slidesUrl:
+          type: string
+          nullable: true
+          description: URL of the generated Google Slides presentation in the user's Drive, when created.
+        templateKind:
+          type: string
+          nullable: true
+          description: Template used for generation (e.g. "STANDARD"), null for manual submissions.
+        status:
+          description: Lifecycle state of the category analysis deck generation.
+          allOf:
+            - $ref: "#/components/schemas/GenerationStatusV1"
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the category analysis was created.
+
+    CreateCategoryAnalysisRequestV1:
+      type: object
+      additionalProperties: false
+      description: Request payload for creating a new category analysis. Title is required; all other fields are optional.
+      required: [ title ]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Title of the category analysis.
+        category:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Market category or sector being analysed.
+        marketOverview:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: High-level overview of the market landscape.
+        keyPlayers:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Key competitors or players in the category.
+        trends:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Emerging trends shaping the category.
+        opportunities:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Strategic opportunities identified within the category.
+        recommendations:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Recommended actions or strategies.
+        sourceFileNames:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Comma-separated names of uploaded source documents used for analysis.
+
+    StandardConnectionsV1:
+      type: object
+      additionalProperties: false
+      description: Connection status for the Standard Category Analysis deck generator.
+      required: [ aiConnected, googleConnected, googleStatus ]
+      properties:
+        aiConnected:
+          type: boolean
+          description: True when the AI drafting engine (OpenAI API key) is configured.
+        googleConnected:
+          type: boolean
+          description: True when the authenticated user's Google account grants Drive/Slides access via Clerk SSO.
+        googleStatus:
+          description: Detailed Google connection state, so the UI can guide the user through re-consent.
+          allOf:
+            - $ref: "#/components/schemas/GoogleConnectionStatusV1"
+
+    StandardDraftRequestV1:
+      type: object
+      additionalProperties: false
+      description: Short brief used to AI-draft a Standard Category Analysis.
+      required: [ category, clientName, clientWebsite ]
+      properties:
+        category:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Market category or industry being analysed (e.g. "Regional Travel", "Western Boots").
+        clientName:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Client the analysis is prepared for (e.g. "Alberta Boot").
+        clientWebsite:
+          type: string
+          maxLength: 2048
+          minLength: 1
+          description: >-
+            Client's website URL (e.g. "https://albertaboot.com"). The builder reviews the
+            site to understand the client's business focus and confirm the deck aligns with it.
+        storyTheme:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: >-
+            Optional narrative theme to guide the arc of the deck (e.g. "how adopting CTV can
+            increase market awareness"). Emphasised across slides while still covering broader trends.
+        guidanceNotes:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Optional focus areas, angles, or constraints to steer the draft.
+
+    StandardDraftFieldV1:
+      type: object
+      additionalProperties: false
+      description: One drafted template field with its slide grouping metadata.
+      required: [ key, label, slideNumber, value ]
+      properties:
+        key:
+          type: string
+          description: Stable template token key (e.g. "trends_headline").
+        label:
+          type: string
+          description: Human-readable label shown in the review UI.
+        slideNumber:
+          type: integer
+          format: int32
+          description: Slide the field belongs to (1-5).
+        value:
+          type: string
+          description: Drafted text value; editable by the user before deck creation.
+
+    DraftAlignmentV1:
+      type: object
+      additionalProperties: false
+      description: Website-based confirmation that the drafted deck matches the client's business focus.
+      required: [ confirmed, matches, message ]
+      properties:
+        clientBusinessFocus:
+          type: string
+          nullable: true
+          description: Short summary of the client's core business focus, derived from their website.
+        confirmed:
+          type: boolean
+          description: >-
+            Whether the client website could be read to actually check alignment. When false the
+            match result is unverified and the message explains why.
+        matches:
+          type: boolean
+          description: >-
+            Whether the analysed category clearly fits the client's business focus. Only meaningful
+            when confirmed is true.
+        message:
+          type: string
+          description: Human-readable confirmation or warning about topic/business alignment.
+
+    StandardDraftV1:
+      type: object
+      additionalProperties: false
+      description: Complete AI-drafted field set for the Standard Category Analysis template.
+      required: [ fields, alignment ]
+      properties:
+        fields:
+          type: array
+          description: All drafted template fields ordered by slide.
+          items:
+            $ref: "#/components/schemas/StandardDraftFieldV1"
+        alignment:
+          description: How closely the draft matched the requested category and client.
+          allOf:
+            - $ref: "#/components/schemas/DraftAlignmentV1"
+
+    RedraftSlideRequestV1:
+      type: object
+      additionalProperties: false
+      description: Brief plus current deck context used to AI-redraft a single slide of a Standard Category Analysis.
+      required: [ category, clientName, slideNumber, currentFields ]
+      properties:
+        category:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Market category or industry being analysed (e.g. "Regional Travel", "Western Boots").
+        clientName:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Client the analysis is prepared for (e.g. "Alberta Boot").
+        guidanceNotes:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Original brief focus areas or constraints, may be null.
+        slideNumber:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 5
+          description: Slide to redraft (1-5).
+        slideNote:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Optional guidance for this redraft (e.g. "make it more data-driven", "focus on Gen Z").
+        currentFields:
+          type: array
+          maxItems: 200
+          description: Current values for every template field of the deck, supplied as context so the redraft stays consistent with slides being kept.
+          items:
+            $ref: "#/components/schemas/StandardFieldValueV1"
+
+    StandardFieldValueV1:
+      type: object
+      additionalProperties: false
+      description: A reviewed field value keyed by its template token.
+      required: [ key, value ]
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Stable template token key.
+        value:
+          type: string
+          maxLength: 20000
+          description: Final reviewed text value.
+
+    CreateStandardDeckRequestV1:
+      type: object
+      additionalProperties: false
+      description: Reviewed field values used to create the deck in the user's Google Slides.
+      required: [ category, clientName, fields ]
+      properties:
+        category:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Market category or industry being analysed.
+        clientName:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Client the analysis is prepared for.
+        fields:
+          type: array
+          maxItems: 200
+          description: Final reviewed values for every template field.
+          items:
+            $ref: "#/components/schemas/StandardFieldValueV1"
+
+    RndDecisionV1:
+      type: string
+      description: |
+        Triage decision for an RnD request.
+        ESCALATE_TO_RND — the buy meets or exceeds the escalation threshold; a drafted RnD submission summary is provided.
+        WORKAROUND — the buy is below the threshold; a positive, relay-ready workaround response is provided instead of a "no".
+      enum: [ ESCALATE_TO_RND, WORKAROUND ]
+
+    RndRequestSummaryV1:
+      type: object
+      additionalProperties: false
+      description: Lightweight summary of a triaged RnD request for list views.
+      required: [ id, title, buyAmount, decision, status, createdAt ]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier of the RnD request.
+        title:
+          type: string
+          description: Short title of the requested feature or product capability.
+        requesterTeam:
+          type: string
+          nullable: true
+          description: Growth team or requester the ask came from.
+        buyAmount:
+          type: number
+          description: Deal size ("the buy") in USD used for triage.
+        decision:
+          description: Triage outcome for the request, derived from the deal size.
+          allOf:
+            - $ref: "#/components/schemas/RndDecisionV1"
+        status:
+          description: Lifecycle state of the request's triage run.
+          allOf:
+            - $ref: "#/components/schemas/GenerationStatusV1"
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the RnD request was created.
+
+    RndRequestV1:
+      type: object
+      additionalProperties: false
+      description: Full detail of a triaged RnD request including the drafted relay-ready response.
+      required: [ id, title, buyAmount, decision, status, createdAt ]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier of the RnD request.
+        title:
+          type: string
+          description: Short title of the requested feature or product capability.
+        requesterTeam:
+          type: string
+          nullable: true
+          description: Growth team or requester the ask came from.
+        requestDetails:
+          type: string
+          nullable: true
+          description: Full description of the feature/product request from the growth team.
+        capabilityNotes:
+          type: string
+          nullable: true
+          description: Manual notes about existing capabilities or possible workarounds supplied by the triager.
+        buyAmount:
+          type: number
+          description: Deal size ("the buy") in USD used for triage.
+        decision:
+          description: Triage outcome for the request, derived from the deal size.
+          allOf:
+            - $ref: "#/components/schemas/RndDecisionV1"
+        capabilitySummary:
+          type: string
+          nullable: true
+          description: Result of the capability search across connected knowledge sources (Slite, Asana). Reports "not connected" when integrations are not configured.
+        responseDraft:
+          type: string
+          nullable: true
+          description: Drafted output — an RnD submission summary when escalated, otherwise a positive relay-ready workaround response.
+        status:
+          description: Lifecycle state of the request's triage run.
+          allOf:
+            - $ref: "#/components/schemas/GenerationStatusV1"
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the RnD request was created.
+
+    CreateRndRequestRequestV1:
+      type: object
+      additionalProperties: false
+      description: Request payload for creating and triaging a new RnD request. Title and buy amount are required.
+      required: [ title, buyAmount ]
+      properties:
+        title:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Short title of the requested feature or product capability. Must not be blank.
+        requesterTeam:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Growth team or requester the ask came from.
+        requestDetails:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Full description of the feature/product request.
+        capabilityNotes:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Manual notes about existing capabilities or possible workarounds.
+        buyAmount:
+          type: number
+          description: Deal size ("the buy") in USD. Must be zero or greater.
+          minimum: 0
+
+    AppValidationExceptionResponseV1:
+      type: object
+      additionalProperties: false
+      description: Representation of validation exception occurred in REST API format.
+      required: [ errors, timestamp, correlationId ]
+      properties:
+        errors:
+          description: The list of validation errors occurred.
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldToErrorResponseV1"
+        timestamp:
+          type: string
+          format: date-time
+          description: The timestamp exception occurred.
+        correlationId:
+          type: string
+          description: The log stream UUID.
+
+    FieldToErrorResponseV1:
+      type: object
+      additionalProperties: false
+      description: Representation of validation error bound to a field or semantic request part.
+      required: [ code, field, error ]
+      properties:
+        code: { type: string, description: "The code of validation error occurred." }
+        field: { type: string, description: "The field or semantic request part not passed validation." }
+        error: { type: string, description: "The validation error occurred." }
+
+    AppApiExceptionResponseV1:
+      type: object
+      additionalProperties: false
+      description: Representation of exception occurred in REST API format.
+      required: [ code, message, timestamp, correlationId ]
+      properties:
+        code: { type: string, description: "The code of exception occurred." }
+        message: { type: string, description: "The message of exception occurred." }
+        timestamp: { type: string, format: date-time, description: "The timestamp exception occurred." }
+        correlationId: { type: string, description: "The log stream UUID." }

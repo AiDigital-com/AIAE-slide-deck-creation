@@ -1,0 +1,53 @@
+modules = ["java-21", "nodejs-22", "postgresql-16"]
+hidden  = [".idea", ".vscode", "target", "node_modules", "generated-sources", ".cache"]
+
+[nix]
+channel = "stable-24_11"
+
+[deployment]
+deploymentTarget = "gce"
+build = ["bash", "scripts/replit-build.sh"]
+run   = ["bash", "scripts/replit-run.sh"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[env]
+PORT = "5000"
+SPRING_PROFILES_ACTIVE = "replit"
+VITE_CLERK_JWT_TEMPLATE = "aidigital-api"
+
+[workflows]
+runButton = "Run"
+
+[[workflows.workflow]]
+name = "Run"
+mode = "parallel"
+
+# Inlined rather than delegated to scripts/replit-dev-*.sh: verify-gates.sh
+# asserts the reactor-safe Maven target and the generate:api step are visible in
+# this file. The scripts remain the entry point for the same loop outside Replit.
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash -lc 'source scripts/replit-env.sh; mvn -f backend/pom.xml -DskipTests install && mvn -f backend/application/pom.xml -DskipTests spring-boot:run'"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash -lc 'source scripts/replit-env.sh; cd frontend && { [ -f package-lock.json ] && npm ci || npm install; } && npm run generate:api && npm run dev -- --host 0.0.0.0 --port 5173'"
+
+[agent]
+expertMode = true
+
+[userenv]
+
+# Base values are the non-prod Clerk instance and are what the workspace uses.
+# The published app overrides them with PRD_-prefixed Configurations, applied by
+# scripts/lib/deploy-env.sh on the [deployment] path only.
+[userenv.shared]
+AUTH_ALLOWED_EMAIL_DOMAIN = "aidigital.com"
+AUTH_AUTHORIZED_PARTIES = "https://*.replit.dev,https://*.repl.co,http://localhost:5173,http://localhost:5000,https://dbbbec0d-e26f-460d-806a-70154a27b6e6-00-1voyq1kvhhs8j.riker.replit.dev,https://slide-deck-creator-poc.replit.app"
+CLERK_PUBLISHABLE_KEY = "pk_test_bGl2aW5nLWluc2VjdC02MC5jbGVyay5hY2NvdW50cy5kZXYk"
+PRD_APP_SECURITY_CSP_FRAME_ANCESTORS = "'self' https://slide-deck-creator-poc.replit.app"
+PRD_AUTH_AUTHORIZED_PARTIES = "https://slide-deck-creator-poc.replit.app"
+PRD_CLERK_PUBLISHABLE_KEY = "pk_test_bGl2aW5nLWluc2VjdC02MC5jbGVyay5hY2NvdW50cy5kZXYk"

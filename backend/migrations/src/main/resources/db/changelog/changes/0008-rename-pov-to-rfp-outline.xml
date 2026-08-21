@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+		xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+	<!-- POV Builder was renamed to RFP Outline Generator before any real usage —
+		 rename the table and its index to match. -->
+	<changeSet id="0008-rename-pov-to-rfp-outline" author="agent">
+		<preConditions onFail="MARK_RAN">
+			<tableExists tableName="povs"/>
+			<not>
+				<tableExists tableName="rfp_outlines"/>
+			</not>
+		</preConditions>
+		<renameTable oldTableName="povs" newTableName="rfp_outlines"/>
+		<dropIndex tableName="rfp_outlines" indexName="idx_povs_created_by"/>
+		<createIndex tableName="rfp_outlines" indexName="idx_rfp_outlines_created_by">
+			<column name="created_by"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>

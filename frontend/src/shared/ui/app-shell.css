@@ -1,0 +1,101 @@
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-6);
+    background: hsl(var(--background));
+    border-bottom: 0.0625rem solid hsl(var(--border));
+    box-shadow: var(--shadow-header);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.app-header__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    text-decoration: none;
+    color: inherit;
+}
+
+.app-header__logo {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius-md);
+    background: var(--gradient-brand);
+    color: hsl(var(--primary-foreground));
+    font-size: var(--text-table-head);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-soft);
+}
+
+.app-header__brand-group {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.app-header__brand-name {
+    font-size: var(--text-subhead);
+    font-weight: 600;
+    color: hsl(var(--header-text));
+}
+
+.app-header__brand-sub {
+    font-size: var(--text-pill);
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.app-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: hsl(var(--secondary));
+}
+
+.app-shell__main {
+    flex: 1;
+    padding: var(--space-6) var(--space-6) var(--space-10);
+}
+
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.page-header__title {
+    margin: 0;
+    font-size: var(--text-page-title);
+    font-weight: 700;
+    color: hsl(var(--header-text));
+}
+
+.page-header__subtitle {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-base);
+    color: hsl(var(--muted-foreground));
+}
+
+.page-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}

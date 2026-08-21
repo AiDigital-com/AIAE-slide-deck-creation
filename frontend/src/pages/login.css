@@ -1,0 +1,138 @@
+/*
+ * `login` block — split sign-in surface: a brand panel in the product's own
+ * colours beside the Clerk sign-in card. Class selectors only, no nesting;
+ * modifiers live as separate classes. Colours and sizes come from semantic
+ * tokens — no raw px, no hard-coded colour.
+ *
+ * The `cl-*` selectors below are Clerk's own component classes. They are the
+ * only supported way to bring a hosted widget into the product's palette, and
+ * they need `!important` because Clerk ships its theme as inline-priority CSS.
+ */
+
+.login {
+    min-height: 100vh;
+    display: flex;
+    background: var(--surface-default);
+}
+
+.login__shell {
+    width: 100%;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(26rem, 32rem);
+}
+
+.login__brand {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: var(--space-10) clamp(var(--space-6), 6vw, 5rem);
+    background: var(--accent-primary);
+    color: var(--text-on-accent);
+}
+
+.login__mark {
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: var(--space-10);
+    border-radius: var(--radius-lg);
+    background: var(--surface-default);
+    color: hsl(var(--primary));
+    font-size: var(--text-section);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-soft);
+}
+
+.login__eyebrow {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-pill);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+
+.login__title {
+    margin: 0 0 var(--space-4);
+    font-size: clamp(2.25rem, 4.2vw, 3.5rem);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--text-on-accent);
+}
+
+.login__lede {
+    max-width: 30rem;
+    margin: 0;
+    font-size: var(--text-subhead);
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+.login__panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: var(--space-10) clamp(var(--space-6), 5vw, var(--space-10));
+    background: var(--surface-default);
+}
+
+.login__panel-title {
+    width: 100%;
+    max-width: 23rem;
+    margin: 0 0 var(--space-6);
+    font-size: var(--text-page-title);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--text-heading);
+}
+
+.login__panel .cl-rootBox {
+    width: 100%;
+    max-width: 23rem;
+}
+
+.login__panel .cl-formButtonPrimary {
+    background: var(--accent-primary) !important;
+    border-color: var(--accent-primary) !important;
+    color: var(--text-on-accent) !important;
+    border-radius: var(--radius-md) !important;
+    font-weight: 700 !important;
+}
+
+.login__panel .cl-formButtonPrimary:hover {
+    background: var(--accent-primary-hover) !important;
+    border-color: var(--accent-primary-hover) !important;
+}
+
+.login__panel .cl-formFieldInput {
+    border-radius: var(--radius-md);
+    border-color: var(--border-default);
+}
+
+.login__panel .cl-formFieldInput:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 var(--space-1) var(--focus-ring);
+}
+
+.login__panel .cl-footerActionLink {
+    color: var(--text-link);
+}
+
+@media (max-width: 55rem) {
+    .login__shell {
+        grid-template-columns: 1fr;
+    }
+
+    .login__brand {
+        display: none;
+    }
+}

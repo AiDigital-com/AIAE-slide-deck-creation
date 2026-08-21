@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+		xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+	<include file="db/changelog/changes/0001-usage-events.xml"/>
+	<include file="db/changelog/changes/0002-case-studies.xml"/>
+	<include file="db/changelog/changes/0003-category-analyses.xml"/>
+	<include file="db/changelog/changes/0004-rnd-requests.xml"/>
+	<include file="db/changelog/changes/0005-category-analysis-decks.xml"/>
+	<include file="db/changelog/changes/0006-case-study-slides-url.xml"/>
+	<include file="db/changelog/changes/0007-povs.xml"/>
+	<include file="db/changelog/changes/0008-rename-pov-to-rfp-outline.xml"/>
+	<include file="db/changelog/changes/0003-cache-invalidation.xml"/>
+	<!-- Add new changelogs above this line in numerically increasing order. -->
+
+</databaseChangeLog>

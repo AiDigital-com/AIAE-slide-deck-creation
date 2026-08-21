@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36">
+    <defs>
+        <linearGradient id="brand" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="hsl(239 100% 43%)" />
+            <stop offset="100%" stop-color="hsl(263 60% 52%)" />
+        </linearGradient>
+    </defs>
+    <rect width="36" height="36" rx="10" fill="url(#brand)" />
+    <text
+        x="18"
+        y="24"
+        text-anchor="middle"
+        font-family="Inter, Arial, sans-serif"
+        font-size="15"
+        font-weight="700"
+        fill="#ffffff"
+    >SP</text>
+</svg>

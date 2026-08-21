@@ -1,0 +1,67 @@
+server:
+  port: ${PORT:5000}
+  # Without this a redeploy kills the JVM immediately, severing any in-flight
+  # request mid-response — a deck generation can be minutes of OpenAI and Slides
+  # work. Timeout set just past the longest external call budget.
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 35s
+  # Reserved VM cold-start is slow — Liquibase + Hibernate + JPA scanning
+  # routinely push first-bind past the deployment's port-check window (~30s), so
+  # the container is killed before Tomcat ever opens 5000. Lazy-init defers most
+  # beans until first request. Trade-off: first controller request is ~1-2s slower.
+  main:
+    lazy-initialization: true
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # Skips Hibernate's slow JDBC metadata round-trip at startup. Requires
+        # the explicit dialect above, or Hibernate fails with "Unable to
+        # determine Dialect without JDBC metadata".
+        boot.allow_jdbc_metadata_access: false
+        temp.use_jdbc_metadata_defaults: false
+  # Replit's postgresql-16 module exposes individual PG* vars to the app process.
+  datasource:
+    url: jdbc:postgresql://${PGHOST:${POSTGRES_HOST:localhost}}:${PGPORT:${POSTGRES_PORT:5432}}/${PGDATABASE:${POSTGRES_DB:app}}
+    username: ${PGUSER:${POSTGRES_USER:app}}
+    password: ${PGPASSWORD:${POSTGRES_PASSWORD:app}}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 1
+      idle-timeout: 10000
+      connection-timeout: 10000
+      leak-detection-threshold: 20000
+      auto-commit: false
+  liquibase:
+    enabled: ${SPRING_LIQUIBASE_ENABLED:true}
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+management:
+  # Splits /actuator/health into readiness/liveness groups so the deploy's
+  # port-check can gate traffic on actual startup completion rather than on the
+  # port being open — lazy-init above opens the port well before beans finish.
+  health:
+    probes:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    persist-authorization: true
+
+app:
+  cache:
+    warmup-enabled: false
+  usage-logging:
+    environment: ${USAGE_LOG_ENVIRONMENT:dev}
+
+logging:
+  level:
+    # Base config defaults this to TRACE for full request/response bodies in dev.
+    # Deployed, default to INFO so bodies are not logged unless a one-off
+    # debugging session re-enables it via LOGBOOK_LEVEL.
+    org.zalando.logbook: ${LOGBOOK_LEVEL:INFO}

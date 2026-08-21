@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+		xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+	<changeSet id="0004-rnd-requests-initial" author="agent">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<tableExists tableName="rnd_requests"/>
+			</not>
+		</preConditions>
+		<createTable tableName="rnd_requests">
+			<column name="id" type="BIGINT" autoIncrement="true">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="title" type="TEXT">
+				<constraints nullable="false"/>
+			</column>
+			<column name="requester_team" type="TEXT"/>
+			<column name="request_details" type="TEXT"/>
+			<column name="capability_notes" type="TEXT"/>
+			<column name="buy_amount" type="NUMERIC(14,2)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="decision" type="TEXT">
+				<constraints nullable="false"/>
+			</column>
+			<column name="capability_summary" type="TEXT"/>
+			<column name="response_draft" type="TEXT"/>
+			<column name="status" type="TEXT">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_by" type="TEXT">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMPTZ">
+				<constraints nullable="false"/>
+			</column>
+		</createTable>
+
+		<createIndex tableName="rnd_requests" indexName="idx_rnd_requests_created_by">
+			<column name="created_by"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>

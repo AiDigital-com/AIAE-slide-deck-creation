@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+		xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+	<changeSet id="0003-category-analyses-initial" author="agent">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<tableExists tableName="category_analyses"/>
+			</not>
+		</preConditions>
+		<createTable tableName="category_analyses">
+			<column name="id" type="BIGINT" autoIncrement="true">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="title" type="TEXT">
+				<constraints nullable="false"/>
+			</column>
+			<column name="category" type="TEXT"/>
+			<column name="market_overview" type="TEXT"/>
+			<column name="key_players" type="TEXT"/>
+			<column name="trends" type="TEXT"/>
+			<column name="opportunities" type="TEXT"/>
+			<column name="recommendations" type="TEXT"/>
+			<column name="source_file_names" type="TEXT"/>
+			<column name="status" type="TEXT">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_by" type="TEXT">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMPTZ">
+				<constraints nullable="false"/>
+			</column>
+		</createTable>
+
+		<createIndex tableName="category_analyses" indexName="idx_category_analyses_created_by">
+			<column name="created_by"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,12 @@
+.ui-state {
+    font-size: var(--text-body);
+    color: var(--text-muted);
+}
+
+.ui-state--error {
+    color: var(--accent-danger);
+}
+
+.ui-state--empty {
+    font-style: italic;
+}
