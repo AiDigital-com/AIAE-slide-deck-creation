@@ -1499,7 +1499,7 @@ components:
             increase market awareness"). Emphasised across slides while still covering broader trends.
         guidanceNotes:
           type: string
-          maxLength: 5000
+          maxLength: 10000
           nullable: true
           description: Optional focus areas, angles, or constraints to steer the draft.
 
@@ -1581,7 +1581,7 @@ components:
           description: Client the analysis is prepared for (e.g. "Alberta Boot").
         guidanceNotes:
           type: string
-          maxLength: 5000
+          maxLength: 10000
           nullable: true
           description: Original brief focus areas or constraints, may be null.
         slideNumber:

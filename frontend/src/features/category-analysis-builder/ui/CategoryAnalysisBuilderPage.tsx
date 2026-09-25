@@ -5,10 +5,18 @@ import { useClerk } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { AppShell } from "../../../app/AppShell";
+import { describeApiError } from "../../../shared/api/apiError";
 import { apiClient } from "../../../shared/api/client";
 import { ErrorAlert } from "../../../shared/ui/ErrorAlert";
 import { LoadingBlock } from "../../../shared/ui/LoadingBlock";
-import { EMPTY_BRIEF, SLIDE_TITLES } from "../constants/brief";
+import {
+    BRIEF_FIELD_LABELS,
+    DECK_FALLBACK_ERROR,
+    DRAFT_FALLBACK_ERROR,
+    EMPTY_BRIEF,
+    REDRAFT_FALLBACK_ERROR,
+    SLIDE_TITLES,
+} from "../constants/brief";
 import type {
     BriefFieldErrors,
     BriefState,
@@ -124,7 +132,9 @@ export function CategoryAnalysisBuilderPage() {
                     },
                 },
             );
-            if (error || !data) throw new Error("Drafting failed");
+            if (error || !data) {
+                throw new Error(describeApiError(error, DRAFT_FALLBACK_ERROR, BRIEF_FIELD_LABELS));
+            }
             return data;
         },
         onSuccess: (data) => {
@@ -149,7 +159,9 @@ export function CategoryAnalysisBuilderPage() {
                     },
                 },
             );
-            if (error || !data) throw new Error("Redraft failed");
+            if (error || !data) {
+                throw new Error(describeApiError(error, REDRAFT_FALLBACK_ERROR, BRIEF_FIELD_LABELS));
+            }
             return { data, slideNumber };
         },
         onSuccess: ({ data, slideNumber }) => {
@@ -175,7 +187,9 @@ export function CategoryAnalysisBuilderPage() {
                     },
                 },
             );
-            if (error || !data) throw new Error("Deck creation failed");
+            if (error || !data) {
+                throw new Error(describeApiError(error, DECK_FALLBACK_ERROR, BRIEF_FIELD_LABELS));
+            }
             return data;
         },
         onSuccess: (data) => {
@@ -392,7 +406,7 @@ export function CategoryAnalysisBuilderPage() {
                                 </div>
 
                                 {draftMutation.isError && (
-                                    <ErrorAlert message="Drafting failed. Check the AI connection and try again." />
+                                    <ErrorAlert message={draftMutation.error.message} />
                                 )}
 
                                 <button
@@ -560,7 +574,7 @@ export function CategoryAnalysisBuilderPage() {
                                                 </button>
                                             )}
                                             {redraftMutation.isError && activeRedraftSlide === slide && (
-                                                <ErrorAlert message="Redraft failed. Check the AI connection and try again." />
+                                                <ErrorAlert message={redraftMutation.error.message} />
                                             )}
                                         </div>
                                     </div>
@@ -569,7 +583,7 @@ export function CategoryAnalysisBuilderPage() {
                                 <GoogleAccessNotice status={googleStatus} />
 
                                 {deckMutation.isError && (
-                                    <ErrorAlert message="Deck creation failed. Check Google access and try again." />
+                                    <ErrorAlert message={deckMutation.error.message} />
                                 )}
 
                                 <div className="cab__actions">

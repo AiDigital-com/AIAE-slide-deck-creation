@@ -72,6 +72,7 @@ class CategoryAnalysesControllerTest {
 	private static final String DECKS_URL = "/api/v1/category-analyses/standard-decks";
 	private static final String SLIDE_REDRAFT_URL = "/api/v1/category-analyses/standard-drafts/slide";
 	private static final String ANALYSES_URL = "/api/v1/category-analyses";
+	private static final int FOCUS_NOTES_MAX_LENGTH = 10_000;
 
 	@Autowired
 	private MockMvc mvc;
@@ -284,6 +285,69 @@ class CategoryAnalysesControllerTest {
 
 		// Then: the request is rejected without reaching the service
 		response.andExpect(status().isBadRequest());
+		verifyNoInteractions(categoryAnalysisService);
+	}
+
+	@Test
+	void shouldAcceptDraftRequestWithFocusNotesAtTheContractLimitTest() throws Exception {
+		// Given: a brief whose focus notes fill the contract's character budget exactly
+		String notes = "n".repeat(FOCUS_NOTES_MAX_LENGTH);
+		StandardDraft draft = new StandardDraft(
+				List.of(new StandardDraftField("trends_headline", "Trends", 2, "Growth is accelerating")),
+				new DraftAlignment("Premium beverage brand", true, true, "The deck fits Acme's business."));
+		when(categoryAnalysisService.draftStandard(
+				"Beverages", "Acme", notes, "https://acme.com", null))
+				.thenReturn(draft);
+
+		// When: it is posted
+		ResultActions response = mvc.perform(post(DRAFTS_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"category\":\"Beverages\",\"clientName\":\"Acme\","
+						+ "\"clientWebsite\":\"https://acme.com\",\"guidanceNotes\":\"" + notes + "\"}"));
+
+		// Then: the long brief reaches the service and is drafted
+		response.andExpect(status().isOk())
+				.andExpect(jsonPath("$.fields[0].key").value("trends_headline"));
+		verify(categoryAnalysisService)
+				.draftStandard("Beverages", "Acme", notes, "https://acme.com", null);
+	}
+
+	@Test
+	void shouldRejectDraftRequestWithFocusNotesOverTheContractLimitTest() throws Exception {
+		// Given: focus notes one character past the contract's maxLength
+		String notes = "n".repeat(FOCUS_NOTES_MAX_LENGTH + 1);
+
+		// When: the brief is posted
+		ResultActions response = mvc.perform(post(DRAFTS_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"category\":\"Beverages\",\"clientName\":\"Acme\","
+						+ "\"clientWebsite\":\"https://acme.com\",\"guidanceNotes\":\"" + notes + "\"}"));
+
+		// Then: it is rejected with a field-level reason the UI can render
+		response.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.errors[0].field").value("guidanceNotes"))
+				.andExpect(jsonPath("$.errors[0].error").value("size must be between 0 and 10000"));
+		verifyNoInteractions(categoryAnalysisService);
+	}
+
+	@Test
+	void shouldRejectSlideRedraftWithFocusNotesOverTheContractLimitTest() throws Exception {
+		// Given: a redraft carrying the same brief notes, one character past the limit
+		String notes = "n".repeat(FOCUS_NOTES_MAX_LENGTH + 1);
+
+		// When: the redraft endpoint is called
+		ResultActions response = mvc.perform(post(SLIDE_REDRAFT_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"category\":\"Beverages\",\"clientName\":\"Acme\","
+						+ "\"slideNumber\":2,\"currentFields\":[],"
+						+ "\"guidanceNotes\":\"" + notes + "\"}"));
+
+		// Then: it is rejected without reaching the service
+		response.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.errors[0].field").value("guidanceNotes"));
 		verifyNoInteractions(categoryAnalysisService);
 	}
 }
