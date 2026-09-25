@@ -144,10 +144,13 @@ See `.env.example`. Real values live in Replit Secrets / local `.env` (gitignore
 ## CI
 
 `.github/workflows/ci.yml` runs the MVP safety test suite, Checkstyle, JaCoCo,
-the OpenAPI generator check, frontend tests/build, secret hygiene and the
-docker-compose local-dev dry run.
+the OpenAPI generator check, frontend tests/build and secret hygiene.
 
 Integration tests run on `workflow_dispatch` with `run_integration_tests=true`.
+
+The docker-compose local-dev dry run is not part of CI. The local profile under
+"On a local developer machine" is therefore unverified by the pipeline — run it
+yourself after changing `docker-compose.yml` or either `Dockerfile`.
 
 ## Architecture
 
