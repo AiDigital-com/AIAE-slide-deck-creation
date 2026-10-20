@@ -263,7 +263,7 @@ export function CategoryAnalysisBuilderPage() {
     const slideNumbers = [...new Set(fields.map((f) => f.slideNumber))].sort((a, b) => a - b);
 
     return (
-        <AppShell appName="Strategy & Planning">
+        <AppShell appName="Strategy Toolkit">
             <div className="cab">
                 <div className="cab__nav">
                     <button type="button" className="cab__back" onClick={() => navigate("/")}>

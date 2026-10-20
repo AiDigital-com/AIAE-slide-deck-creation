@@ -45,8 +45,16 @@ public final class AuthConstants {
 			"/category-analysis-builder/**",
 			"/rfp-outline-generator",
 			"/rfp-outline-generator/**",
+			"/one-page-generator",
+			"/one-page-generator/**",
 			"/rnd-request-triage",
 			"/rnd-request-triage/**",
+			// Static preview images bundled with the SPA (browser <img> requests carry no bearer token)
+			"/in-depth-slides/**",
+			"/one-pager-modules/**",
+			"/tool-icons/**",
+			// Brand icons Google Slides fetches when a One-Page Case Study deck swaps template icons
+			"/case-study-icons/**",
 			// Short-lived generated slide images fetched by Google Slides (unauthenticated by design)
 			"/public/slide-images/**",
 			"/actuator/health",

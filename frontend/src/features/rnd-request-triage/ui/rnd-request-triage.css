@@ -31,8 +31,11 @@
 }
 
 .rrt__title {
-    font-size: 1.75rem;
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: var(--text-display-title);
+    font-weight: 900;
+    line-height: var(--leading-display);
+    text-transform: uppercase;
     color: var(--text-heading);
     margin: 0 0 var(--space-1) 0;
 }
@@ -51,7 +54,7 @@
     gap: var(--space-4);
     background: var(--surface-subtle);
     border: 0.0625rem solid var(--border-default);
-    border-radius: var(--radius-md, 0.625rem);
+    border-radius: var(--radius-md);
     padding: var(--space-2) var(--space-4);
     margin-bottom: var(--space-6);
 }
@@ -60,7 +63,7 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
-    font-size: var(--text-small, 0.8125rem);
+    font-size: var(--text-body);
     color: var(--text-muted);
     font-weight: 500;
 }
@@ -74,7 +77,7 @@
 }
 
 .rrt__connections-note {
-    font-size: var(--text-small, 0.8125rem);
+    font-size: var(--text-body);
     color: var(--text-muted);
 }
 
@@ -134,7 +137,7 @@
 }
 
 .rrt__label {
-    font-size: var(--text-small, 0.8125rem);
+    font-size: var(--text-body);
     font-weight: 600;
     color: var(--text-heading);
 }
@@ -150,7 +153,7 @@
     color: var(--text-default);
     background: var(--surface-default);
     border: 0.0625rem solid var(--border-default);
-    border-radius: var(--radius-md, 0.625rem);
+    border-radius: var(--radius-md);
     padding: var(--space-2) var(--space-3);
 }
 
@@ -175,7 +178,7 @@
     color: var(--text-inverse);
     background: var(--accent-primary);
     border: none;
-    border-radius: var(--radius-md, 0.625rem);
+    border-radius: var(--radius-md);
     padding: var(--space-2) var(--space-6);
     cursor: pointer;
 }
@@ -186,7 +189,7 @@
 }
 
 .rrt__submit:not(:disabled):hover {
-    opacity: 0.9;
+    background: var(--accent-primary-hover);
 }
 
 /* Result card */
@@ -218,9 +221,9 @@
 }
 
 .rrt__decision-badge {
-    font-size: var(--text-small, 0.8125rem);
+    font-size: var(--text-body);
     font-weight: 700;
-    border-radius: 62.4375rem;
+    border-radius: var(--radius-full);
     padding: 0.25rem 0.75rem;
 }
 
@@ -261,20 +264,23 @@
 }
 
 .rrt__draft-title {
-    font-size: var(--text-body);
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: var(--text-display-label);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-display);
     color: var(--text-heading);
     margin: 0;
 }
 
 .rrt__copy {
     font: inherit;
-    font-size: var(--text-small, 0.8125rem);
+    font-size: var(--text-body);
     font-weight: 600;
     color: var(--accent-primary);
     background: none;
     border: 0.0625rem solid var(--accent-primary);
-    border-radius: var(--radius-md, 0.625rem);
+    border-radius: var(--radius-md);
     padding: 0.25rem 0.75rem;
     cursor: pointer;
 }
@@ -290,7 +296,7 @@
     color: var(--text-default);
     background: var(--surface-subtle);
     border: 0.0625rem solid var(--border-default);
-    border-radius: var(--radius-md, 0.625rem);
+    border-radius: var(--radius-md);
     padding: var(--space-4);
     margin: 0;
     white-space: pre-wrap;
@@ -298,7 +304,7 @@
 }
 
 .rrt__capability-summary {
-    font-size: var(--text-small, 0.8125rem);
+    font-size: var(--text-body);
     font-weight: 600;
     color: var(--text-muted);
     cursor: pointer;
@@ -318,14 +324,17 @@
 }
 
 .rrt__recent-title {
-    font-size: var(--text-body);
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: var(--text-display-label);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-display);
     color: var(--text-heading);
     margin: 0 0 var(--space-3) 0;
 }
 
 .rrt__recent-empty {
-    font-size: var(--text-small, 0.8125rem);
+    font-size: var(--text-body);
     color: var(--text-muted);
     margin: 0;
 }
@@ -353,21 +362,21 @@
 }
 
 .rrt__recent-name {
-    font-size: var(--text-small, 0.8125rem);
+    font-size: var(--text-body);
     font-weight: 600;
     color: var(--text-heading);
 }
 
 .rrt__recent-meta {
-    font-size: var(--text-small, 0.8125rem);
+    font-size: var(--text-body);
     color: var(--text-muted);
 }
 
 .rrt__recent-badge {
     align-self: flex-start;
-    font-size: 0.6875rem;
+    font-size: var(--text-badge);
     font-weight: 700;
-    border-radius: 62.4375rem;
+    border-radius: var(--radius-full);
     padding: 0.125rem 0.5rem;
 }
 

@@ -31,8 +31,11 @@
 }
 
 .rog__title {
-    font-size: 1.75rem;
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: var(--text-display-title);
+    font-weight: 900;
+    line-height: var(--leading-display);
+    text-transform: uppercase;
     color: var(--text-heading);
     margin: 0 0 var(--space-1) 0;
 }
@@ -163,7 +166,7 @@
     justify-content: space-between;
     gap: var(--space-2);
     padding: var(--space-1) var(--space-3);
-    background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
+    background: var(--surface-muted);
     border-radius: 0.375rem;
     font-size: var(--text-body);
     color: var(--text-heading);
@@ -320,7 +323,7 @@
     height: 2.5rem;
     padding: 0 var(--space-6);
     background: var(--accent-primary);
-    color: hsl(var(--primary-foreground));
+    color: var(--text-on-accent);
     border: none;
     border-radius: var(--radius-md);
     font-size: var(--text-table-head);
@@ -353,8 +356,11 @@
 }
 
 .rog__recent-title {
-    font-size: var(--text-subhead);
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: var(--text-display-section);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-display);
     color: var(--text-heading);
     margin: 0 0 var(--space-4) 0;
     padding-bottom: var(--space-3);
@@ -367,7 +373,7 @@
     margin: 0;
     padding: var(--space-4);
     text-align: center;
-    background: hsl(var(--secondary));
+    background: var(--surface-muted);
     border: 0.0625rem dashed var(--border-default);
     border-radius: var(--radius-md);
 }
@@ -396,7 +402,7 @@
 
 .rog__recent-item:hover {
     border-color: var(--border-strong);
-    background: hsl(var(--secondary));
+    background: var(--surface-muted);
     box-shadow: var(--shadow-card);
 }
 

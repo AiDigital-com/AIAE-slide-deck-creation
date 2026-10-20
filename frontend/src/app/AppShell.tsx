@@ -3,7 +3,7 @@ import type { AppShellProps } from "./model/types";
 import "../shared/ui/app-shell.css";
 
 /** Content shell below the top header — max-width centered product surface. */
-export function AppShell({ children, appName = "Strategy & Planning" }: AppShellProps) {
+export function AppShell({ children, appName = "Strategy Toolkit" }: AppShellProps) {
     return (
         <div className="app-shell">
             <AppHeader appName={appName} />
