@@ -39,6 +39,7 @@ public class OpenAiChatClientImpl implements OpenAiChatClient {
 
 	private static final String CHAT_COMPLETIONS_PATH = "/chat/completions";
 	private static final String CLIENT_NAME = "openai-chat";
+	private static final String FINISH_REASON_LENGTH = "length";
 
 	private final PooledRestClientFactory restClientFactory;
 	private final ObjectMapper objectMapper;
@@ -84,8 +85,13 @@ public class OpenAiChatClientImpl implements OpenAiChatClient {
 	 * Extracts the model's message content from a chat completions response envelope.
 	 *
 	 * @param responseBody raw response body
+	 * <p>A completion whose {@code finish_reason} is {@code length} is rejected as incomplete
+	 * before its content is read: a cut-off answer is almost never the valid JSON callers expect,
+	 * and "ask for less at once" is a better message than a parse error.
+	 *
 	 * @return message content
-	 * @throws OpenAiExternalException when the body is unreadable or carries no content
+	 * @throws OpenAiExternalException when the body is unreadable, the completion was cut off at
+	 *                                the token limit, or it carries no content
 	 */
 	String contentOrFail(String responseBody) {
 		JsonNode root;
@@ -95,7 +101,12 @@ public class OpenAiChatClientImpl implements OpenAiChatClient {
 			throw new OpenAiExternalException(OpenAiFailure.TRANSPORT,
 					"OpenAI chat completions response was not valid JSON", e);
 		}
-		String content = root.path("choices").path(0).path("message").path("content").asText("");
+		JsonNode choice = root.path("choices").path(0);
+		if (FINISH_REASON_LENGTH.equals(choice.path("finish_reason").asText(""))) {
+			throw new OpenAiExternalException(OpenAiFailure.INCOMPLETE, 200,
+					"OpenAI chat completions output was cut off at the token limit");
+		}
+		String content = choice.path("message").path("content").asText("");
 		if (content.isBlank()) {
 			throw new OpenAiExternalException(OpenAiFailure.EMPTY_CONTENT, 200,
 					"OpenAI chat completions returned no message content");

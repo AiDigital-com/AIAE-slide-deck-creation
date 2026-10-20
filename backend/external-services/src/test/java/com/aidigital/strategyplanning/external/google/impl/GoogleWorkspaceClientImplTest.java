@@ -2,6 +2,7 @@ package com.aidigital.strategyplanning.external.google.impl;
 
 import com.aidigital.strategyplanning.external.common.http.PooledRestClientFactory;
 import com.aidigital.strategyplanning.external.google.GoogleApiException;
+import com.aidigital.strategyplanning.external.google.config.GoogleWorkspaceClientProperties;
 import com.aidigital.strategyplanning.external.google.model.GoogleApiFailure;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,8 @@ import static org.mockito.Mockito.mock;
 class GoogleWorkspaceClientImplTest {
 
 	private GoogleWorkspaceClientImpl client() {
-		return new GoogleWorkspaceClientImpl(mock(PooledRestClientFactory.class), new ObjectMapper());
+		return new GoogleWorkspaceClientImpl(mock(PooledRestClientFactory.class), new ObjectMapper(),
+				new GoogleWorkspaceClientProperties());
 	}
 
 	@Test
@@ -72,7 +74,8 @@ class GoogleWorkspaceClientImplTest {
 						org.mockito.ArgumentMatchers.anyString(),
 						org.mockito.ArgumentMatchers.any(java.time.Duration.class)))
 				.thenReturn(org.springframework.web.client.RestClient.create());
-		GoogleWorkspaceClientImpl client = new GoogleWorkspaceClientImpl(factory, new ObjectMapper());
+		GoogleWorkspaceClientImpl client = new GoogleWorkspaceClientImpl(factory, new ObjectMapper(),
+				new GoogleWorkspaceClientProperties());
 
 		// When: the same host is asked for twice
 		client.client("https://slides.googleapis.com/v1", "google-slides");

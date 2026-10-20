@@ -184,6 +184,12 @@ app:
       max-connections-per-route: ${APP_EXTERNAL_HTTP_MAX_CONNECTIONS_PER_ROUTE:10}
       keep-alive-duration: 60s
       idle-eviction-duration: 30s
+    # Google Drive file export/upload (PPTX <-> Slides) move whole files and get their own
+    # response ceiling and a bounded retry on Google's transient 5xx pages.
+    google:
+      transfer-response-timeout: ${APP_EXTERNAL_GOOGLE_TRANSFER_RESPONSE_TIMEOUT:120s}
+      transient-retry-attempts: ${APP_EXTERNAL_GOOGLE_TRANSIENT_RETRY_ATTEMPTS:3}
+      transient-retry-backoff: 500ms
   # Logbook HTTP req/resp logging — bound by LogbookConfig. Defaults inline
   # in LogbookProperties mirror the canonical rules; override here per-app.
   # See observability/logbook-http-logging-rules.md.

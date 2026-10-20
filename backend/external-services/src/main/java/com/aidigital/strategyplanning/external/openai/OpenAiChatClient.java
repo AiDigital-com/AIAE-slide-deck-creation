@@ -16,7 +16,11 @@ public interface OpenAiChatClient {
 	 *
 	 * @param call fully described call, including the serialized request body
 	 * @return the model's message content, never blank
-	 * @throws OpenAiExternalException when the provider fails, answers non-200, or returns no
+	 * <p>The message content may be multimodal: an {@code image_url} part carrying a {@code data:}
+	 * URL is just request-body JSON and passes through unchanged.
+	 *
+	 * @throws OpenAiExternalException when the provider fails, answers non-200, reports the
+	 *                                completion as cut off at the token limit, or returns no
 	 *                                message content
 	 */
 	String complete(OpenAiChatCall call);

@@ -272,9 +272,11 @@ never invalidates.
 |---|---|---|---|
 | Clerk | User authentication | OIDC/JWT | Fail closed when token validation or required auth configuration fails |
 | Clerk Backend API | Exchange the session for the user's Google OAuth token | HTTPS with `CLERK_SECRET_KEY` | Request fails; deck generation surfaces the error to the user |
-| OpenAI chat completions | Draft case studies, category analyses, RFP outlines | HTTPS with `OPENAI_API_KEY`, model `gpt-4o` | Blank key means "AI not connected" in the UI; no retry |
+| OpenAI chat completions | Draft case studies, category analyses, RFP outlines; multimodal input (`image_url` data URLs) is plain request JSON | HTTPS with `OPENAI_API_KEY`, model `gpt-4o` | Blank key means "AI not connected" in the UI; no retry; a completion cut off at the token limit (`finish_reason: length`) is the typed `INCOMPLETE` failure |
+| OpenAI Responses API (`/responses`) | In-depth category analysis fact-checking with the built-in `web_search` tool (`OpenAiResponsesClient`) | HTTPS with `OPENAI_API_KEY` | No retry; `status: incomplete` is the typed `INCOMPLETE` failure; the concatenated `output_text` plus the raw `output` items (search calls, citations) are returned |
 | OpenAI image generation | Slide imagery, transparent cutout PNGs | HTTPS with `OPENAI_API_KEY`, model `gpt-image-1` | Deck generation proceeds without imagery |
 | Google Slides / Docs / Drive | Copy a master template into the user's Drive and populate it | HTTPS with the end user's Google OAuth token | Request fails; no partial-deck cleanup |
+| Google Drive export / upload | Export a Slides master as PPTX (`files/{id}/export`) and upload an assembled PPTX back as a Slides file (`upload/drive/v3/files?uploadType=multipart`) for the One-Page Generator | HTTPS with the end user's Google OAuth token; own pools `drive-export` / `drive-upload` with `app.external.google.transfer-response-timeout` (120s) | Resent on a 5xx up to `app.external.google.transient-retry-attempts` (3) with linear backoff; 4xx and transport failures are final |
 | Slite, Asana | Optional capability search for R&D triage | HTTPS with per-provider token | Unset by default; triage works without them |
 | PostgreSQL | Application persistence | JDBC/TLS in managed environments | Transaction rollback; bounded pool (5 connections on Replit) and query timeouts |
 
@@ -284,8 +286,9 @@ Every outbound call goes through `PooledRestClientFactory` in
 from `app.external.http.*`; a provider that answers far slower than an ordinary
 API call (a long AI completion) overrides only its own response timeout rather
 than relaxing the global ceiling. Each client maps provider failures onto a
-typed reason — HTTP status, empty content, transport, interrupted — so callers
-can word a user-facing message correctly instead of surfacing a bare status.
+typed reason — HTTP status, empty content, incomplete (OpenAI only), transport,
+interrupted — so callers can word a user-facing message correctly instead of
+surfacing a bare status.
 
 Two behaviours worth knowing before relying on this in production:
 
