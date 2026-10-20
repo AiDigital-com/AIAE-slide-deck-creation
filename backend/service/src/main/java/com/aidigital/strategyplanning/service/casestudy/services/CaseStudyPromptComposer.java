@@ -2,6 +2,7 @@ package com.aidigital.strategyplanning.service.casestudy.services;
 
 import com.aidigital.strategyplanning.service.casestudy.models.CreateCaseStudyCommand;
 import com.aidigital.strategyplanning.service.common.files.SourceDocument;
+import com.aidigital.strategyplanning.service.common.files.SourceImage;
 
 import java.util.List;
 
@@ -14,12 +15,15 @@ import java.util.List;
 public interface CaseStudyPromptComposer {
 
 	/**
-	 * Builds the request body that extracts every case study field from the source documents.
+	 * Builds the request body that extracts every case study field from the source documents and
+	 * screenshots. Documents are inlined as text; images are attached to the same user message as
+	 * inline data URLs so the model reads figures straight off them.
 	 *
-	 * @param documents parsed source documents (filename + extracted text)
+	 * @param documents parsed source documents (filename + extracted text), may be empty
+	 * @param images    uploaded images, may be empty
 	 * @return serialized JSON request body
 	 */
-	String buildRequestBody(List<SourceDocument> documents);
+	String buildRequestBody(List<SourceDocument> documents, List<SourceImage> images);
 
 	/**
 	 * Builds the request body that rewrites reviewed fields into the template's token structure.

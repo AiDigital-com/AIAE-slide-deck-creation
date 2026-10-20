@@ -16,6 +16,7 @@ import com.aidigital.strategyplanning.service.common.error.AppException;
 import com.aidigital.strategyplanning.service.common.google.impl.GoogleGrantServiceImpl;
 import com.aidigital.strategyplanning.service.common.google.impl.GoogleTemplateFileGatewayImpl;
 import com.aidigital.strategyplanning.service.common.google.impl.TokenReplacementRequestFactoryImpl;
+import com.aidigital.strategyplanning.service.common.files.impl.SourceImageServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -136,7 +137,8 @@ class GoogleCaseStudyDeckServiceImplTest {
 		OpenAiCaseStudyDraftServiceImpl draftService =
 				new OpenAiCaseStudyDraftServiceImpl(new CaseStudyProperties(), objectMapper,
 						mock(OpenAiChatClient.class),
-						new CaseStudyPromptComposerImpl(new CaseStudyProperties(), objectMapper),
+						new CaseStudyPromptComposerImpl(new CaseStudyProperties(), objectMapper,
+								new SourceImageServiceImpl()),
 						new CaseStudyFallbackTokenResolverImpl(),
 						new CaseStudyDraftParserImpl(objectMapper));
 		CreateCaseStudyCommand command = new CreateCaseStudyCommand(

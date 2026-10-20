@@ -10,8 +10,8 @@ import com.aidigital.strategyplanning.security.AppUserFactory;
 import com.aidigital.strategyplanning.service.casestudy.config.CaseStudyProperties;
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyDraftService;
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyService;
-import com.aidigital.strategyplanning.service.common.files.SourceDocument;
-import com.aidigital.strategyplanning.uploads.MultipartSourceDocumentReader;
+import com.aidigital.strategyplanning.service.common.files.SourceUploads;
+import com.aidigital.strategyplanning.uploads.MultipartSourceUploadReader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,7 +31,7 @@ public class CaseStudiesController implements CaseStudiesApi {
 
 	private final CaseStudyService caseStudyService;
 	private final CaseStudyDraftService caseStudyDraftService;
-	private final MultipartSourceDocumentReader multipartSourceDocumentReader;
+	private final MultipartSourceUploadReader multipartSourceUploadReader;
 	private final CaseStudyProperties caseStudyProperties;
 	private final CaseStudyApiMapper caseStudyApiMapper;
 	private final AppUserFactory appUserFactory;
@@ -54,9 +54,10 @@ public class CaseStudiesController implements CaseStudiesApi {
 	@Override
 	public ResponseEntity<CaseStudyDraftV1> draftCaseStudy(List<MultipartFile> files) {
 		appUserFactory.from(SecurityContextHolder.getContext().getAuthentication());
-		List<SourceDocument> documents =
-				multipartSourceDocumentReader.read(files, caseStudyProperties.getMaxSourceFiles());
-		return ResponseEntity.ok(caseStudyApiMapper.toDraftV1(caseStudyDraftService.draft(documents)));
+		SourceUploads uploads =
+				multipartSourceUploadReader.read(files, caseStudyProperties.getMaxSourceFiles());
+		return ResponseEntity.ok(caseStudyApiMapper.toDraftV1(
+				caseStudyDraftService.draft(uploads.documents(), uploads.images())));
 	}
 
 	@Override

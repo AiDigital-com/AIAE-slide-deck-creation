@@ -18,7 +18,11 @@ import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyDraftS
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyService;
 import com.aidigital.strategyplanning.service.common.files.SourceDocument;
 import com.aidigital.strategyplanning.service.common.files.SourceFileTextService;
+import com.aidigital.strategyplanning.service.common.files.SourceImage;
+import com.aidigital.strategyplanning.service.common.files.SourceImageType;
+import com.aidigital.strategyplanning.service.common.files.impl.SourceImageServiceImpl;
 import com.aidigital.strategyplanning.uploads.MultipartSourceDocumentReader;
+import com.aidigital.strategyplanning.uploads.MultipartSourceUploadReader;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,8 +40,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -61,6 +68,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 		AppUserFactory.class,
 		CaseStudyApiMapperImpl.class,
 		MultipartSourceDocumentReader.class,
+		MultipartSourceUploadReader.class,
+		SourceImageServiceImpl.class,
 		ClerkJwtClaimsValidator.class,
 		ClerkPublishableKeyDecoder.class,
 		CompanyEmailDomainAuthorizationManager.class,
@@ -167,7 +176,7 @@ class CaseStudiesControllerTest {
 	void shouldDraftFromUploadedDocumentsTest() throws Exception {
 		// Given: one upload whose extracted text the draft service turns into a case study
 		when(sourceFileTextService.extractText("brief.pdf", "raw".getBytes())).thenReturn("Body");
-		when(caseStudyDraftService.draft(List.of(new SourceDocument("brief.pdf", "Body"))))
+		when(caseStudyDraftService.draft(List.of(new SourceDocument("brief.pdf", "Body")), List.of()))
 				.thenReturn(new CaseStudyDraft("Drafted", "Acme", "Retail", "Challenge",
 						"Solution", "Results", "Metrics", "Q1", "Great work", "brief.pdf"));
 
@@ -181,6 +190,50 @@ class CaseStudiesControllerTest {
 				.andExpect(jsonPath("$.title").value("Drafted"))
 				.andExpect(jsonPath("$.clientName").value("Acme"))
 				.andExpect(jsonPath("$.sourceFileNames").value("brief.pdf"));
+	}
+
+	@Test
+	void shouldForwardScreenshotsAsImagesWithoutTextExtractionTest() throws Exception {
+		// Given: a Markdown note and a PNG screenshot; only the note goes through text extraction
+		when(sourceFileTextService.extractText("notes.md", "# Notes".getBytes())).thenReturn("# Notes");
+		when(caseStudyDraftService.draft(eq(List.of(new SourceDocument("notes.md", "# Notes"))),
+				argThat(images -> images.size() == 1 && images.get(0).fileName().equals("dashboard.png"))))
+				.thenReturn(new CaseStudyDraft("Drafted", null, null, null, null, null, "40% lift",
+						null, null, "notes.md, dashboard.png"));
+
+		// When: both files are uploaded to the draft endpoint
+		ResultActions response = mvc.perform(multipart(DRAFTS_URL)
+				.file(new MockMultipartFile("files", "notes.md", null, "# Notes".getBytes()))
+				.file(new MockMultipartFile("files", "dashboard.png", null, new byte[]{1, 2, 3}))
+				.with(validJwt()));
+
+		// Then: the draft comes back and the screenshot reached the service as a PNG image
+		response.andExpect(status().isOk())
+				.andExpect(jsonPath("$.keyMetrics").value("40% lift"))
+				.andExpect(jsonPath("$.sourceFileNames").value("notes.md, dashboard.png"));
+		ArgumentCaptor<List<SourceImage>> images = ArgumentCaptor.captor();
+		verify(caseStudyDraftService).draft(eq(List.of(new SourceDocument("notes.md", "# Notes"))),
+				images.capture());
+		assertThat(images.getValue()).hasSize(1);
+		assertThat(images.getValue().get(0).fileName()).isEqualTo("dashboard.png");
+		assertThat(images.getValue().get(0).type()).isEqualTo(SourceImageType.PNG);
+		assertThat(images.getValue().get(0).bytes()).containsExactly(1, 2, 3);
+		verify(sourceFileTextService).extractText("notes.md", "# Notes".getBytes());
+		verifyNoMoreInteractions(sourceFileTextService);
+	}
+
+	@Test
+	void shouldRejectAScreenshotOverTheImageSizeLimitAsBadRequestTest() throws Exception {
+		// Given: a PNG one byte past the documented 10 MB ceiling
+		MockMultipartFile huge = new MockMultipartFile("files", "huge.png", null,
+				new byte[SourceImageServiceImpl.MAX_IMAGE_BYTES + 1]);
+
+		// When: it is uploaded to the draft endpoint
+		ResultActions response = mvc.perform(multipart(DRAFTS_URL).file(huge).with(validJwt()));
+
+		// Then: the C002 rejection surfaces as 400 and nothing is drafted
+		response.andExpect(status().isBadRequest());
+		verifyNoInteractions(caseStudyDraftService);
 	}
 
 	@Test

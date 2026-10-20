@@ -7,7 +7,7 @@ import { AppShell } from "../../../app/AppShell";
 import { apiClient } from "../../../shared/api/client";
 import { ErrorAlert } from "../../../shared/ui/ErrorAlert";
 import { LoadingBlock } from "../../../shared/ui/LoadingBlock";
-import { EMPTY_FORM, MAX_SOURCE_FILES } from "../constants/form";
+import { EMPTY_FORM, MAX_SOURCE_FILES, ACCEPTED_SOURCE_FILE_EXTENSIONS, SOURCE_FILE_KINDS_LABEL } from "../constants/form";
 import type { FieldErrors, FormState } from "../model/types";
 import "./case-study-builder.css";
 
@@ -135,7 +135,7 @@ export function CaseStudyBuilderPage() {
     }
 
     return (
-        <AppShell appName="Strategy & Planning">
+        <AppShell appName="Strategy Toolkit">
             <div className="csb">
                 <div className="csb__nav">
                     <button type="button" className="csb__back" onClick={() => navigate("/")}>
@@ -156,7 +156,7 @@ export function CaseStudyBuilderPage() {
                                     <div>
                                         <span className="csb__auto-draft-title">Auto-Draft</span>
                                         <span className="csb__auto-draft-sub">
-                                            Upload up to {MAX_SOURCE_FILES} files (PDF, PowerPoint, Excel, CSV)
+                                            Upload up to {MAX_SOURCE_FILES} files ({SOURCE_FILE_KINDS_LABEL})
                                         </span>
                                     </div>
                                 </div>
@@ -165,7 +165,7 @@ export function CaseStudyBuilderPage() {
                                     <input
                                         type="file"
                                         multiple
-                                        accept=".pdf,.pptx,.ppt,.xlsx,.xls,.csv"
+                                        accept={ACCEPTED_SOURCE_FILE_EXTENSIONS}
                                         className="csb__file-input"
                                         onChange={handleFilesChosen}
                                     />

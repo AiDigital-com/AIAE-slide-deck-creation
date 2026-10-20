@@ -152,11 +152,13 @@ paths:
     post:
       tags: [ CaseStudies ]
       operationId: draftCaseStudy
-      summary: AI-draft case study fields from uploaded source documents
+      summary: AI-draft case study fields from uploaded source documents and screenshots
       description: |
-        Accepts up to 10 source documents (PDF, PowerPoint, Excel, or CSV), extracts their
-        readable content — including tabular data from Excel workbooks — and uses the AI
-        drafting engine to pre-fill every case study form field. The result is meant to be
+        Accepts up to 10 source files (PDF, Word, PowerPoint, Excel, CSV, text/Markdown, or
+        PNG/JPEG/WebP screenshots), extracts the readable content of the documents — including
+        tabular data from Excel workbooks — passes screenshots to the AI drafting engine as images
+        so it can read figures shown in them, and uses the engine to pre-fill every case study
+        form field. Each screenshot must be 10 MB or smaller. The result is meant to be
         reviewed and edited by the user before submission; metrics and quotes are AI-extracted
         and must be verified against the source documents.
       security: [ { bearerAuth: [ ] } ]
@@ -172,13 +174,13 @@ paths:
               properties:
                 files:
                   type: array
-                  description: Uploaded source documents (PDF, PPTX, PPT, XLSX, XLS, or CSV). Maximum 10 files.
+                  description: Uploaded source files (PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, CSV, TXT, MD, PNG, JPG, JPEG, or WEBP). Maximum 10 files; each image at most 10 MB.
                   minItems: 1
                   maxItems: 10
                   items:
                     type: string
                     format: binary
-                    description: One uploaded source document.
+                    description: One uploaded source document or screenshot.
       responses:
         "200":
           description: Drafted case study fields for review.
@@ -187,7 +189,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CaseStudyDraftV1"
         "400":
-          description: Request validation failed (no files, more than 10 files, or an unsupported/unreadable file).
+          description: Request validation failed (no files, more than 10 files, an image over 10 MB, or an unsupported/unreadable file).
           content:
             application/json:
               schema:
