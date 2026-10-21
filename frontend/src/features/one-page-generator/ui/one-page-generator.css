@@ -102,8 +102,12 @@
 }
 
 .opg__aside--how {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
     position: sticky;
     top: var(--space-6);
+    max-height: calc(100vh - var(--space-10));
 }
 
 .opg__card-panel {
@@ -558,6 +562,61 @@
 .opg__step--active {
     color: var(--text-heading);
     font-weight: 600;
+}
+
+/* Recent pages: the caller's recorded one-pagers, scrolling inside the sticky aside */
+.opg__recent {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.opg__recent-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.opg__recent-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-default);
+}
+
+.opg__recent-item:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-card);
+}
+
+.opg__recent-name {
+    font-size: var(--text-body);
+    font-weight: 600;
+    color: var(--text-heading);
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.opg__recent-meta {
+    font-size: var(--text-pill);
+    color: var(--text-muted);
+}
+
+.opg__recent-link {
+    font-size: var(--text-pill);
+    font-weight: 600;
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+.opg__recent-link:hover,
+.opg__recent-link:focus-visible {
+    text-decoration: underline;
 }
 
 /* Live outline: sticky panel with the shell canvas and the overflow tray */

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { AppShell } from "../../../app/AppShell";
 import { describeApiError } from "../../../shared/api/apiError";
 import { apiClient } from "../../../shared/api/client";
 import {
+    CATEGORY_ANALYSES_QUERY_KEY,
     ONE_PAGER_CONNECTIONS_QUERY_KEY,
     ONE_PAGER_DECK_FALLBACK_ERROR,
     ONE_PAGER_DRAFT_FALLBACK_ERROR,
@@ -14,19 +15,23 @@ import {
 } from "../constants/form";
 import { EMPTY_BRIEF } from "../constants/modules";
 import { buildCreateRequest, buildDraftRequest, toggleModule, validateBrief } from "../model/moduleOrder";
+import { selectRecentPages } from "../model/recentPages";
 import type { BriefErrors, BriefState, BriefTextField, BuilderStep, GoogleStatus, ModuleKey, OnePagerDraft, ShellVariant } from "../model/types";
 import { BriefForm } from "./BriefForm";
 import { DoneStep } from "./DoneStep";
 import { DraftReview } from "./DraftReview";
 import { LiveOutline } from "./LiveOutline";
+import { RecentPages } from "./RecentPages";
 import "./one-page-generator.css";
 
 /**
  * One Page Generator: pick a shell and body modules, brief the drafter, review the drafted copy,
  * and get a single-slide page assembled from the master template in your own Google Slides.
+ * Created pages are recorded as category-analysis rows and listed beside the builder.
  */
 export function OnePageGeneratorPage() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [step, setStep] = useState<BuilderStep>("setup");
     const [brief, setBrief] = useState<BriefState>(EMPTY_BRIEF);
     const [errors, setErrors] = useState<BriefErrors>({});
@@ -38,6 +43,15 @@ export function OnePageGeneratorPage() {
         queryFn: async ({ signal }) => {
             const { data, error } = await apiClient.GET("/api/v1/one-pagers/connections", { signal });
             if (error || !data) throw new Error("Failed to check connections");
+            return data;
+        },
+    });
+
+    const recentQuery = useQuery({
+        queryKey: CATEGORY_ANALYSES_QUERY_KEY,
+        queryFn: async ({ signal }) => {
+            const { data, error } = await apiClient.GET("/api/v1/category-analyses", { signal });
+            if (error || !data) throw new Error("Failed to load recent pages");
             return data;
         },
     });
@@ -68,6 +82,7 @@ export function OnePageGeneratorPage() {
         onSuccess: (data) => {
             setSlidesUrl(data.slidesUrl);
             setStep("done");
+            void queryClient.invalidateQueries({ queryKey: CATEGORY_ANALYSES_QUERY_KEY });
             // Finishing while scrolled down a long review would leave the confirmation off-screen.
             window.scrollTo({ top: 0, behavior: "smooth" });
         },
@@ -186,6 +201,11 @@ export function OnePageGeneratorPage() {
                     )}
 
                     <aside className="opg__aside opg__aside--how">
+                        <RecentPages
+                            pages={selectRecentPages(recentQuery.data)}
+                            loading={recentQuery.isLoading}
+                            error={recentQuery.isError}
+                        />
                         <div className="opg__aside-card">
                             <h2 className="opg__aside-title">How it works</h2>
                             <ol className="opg__steps">

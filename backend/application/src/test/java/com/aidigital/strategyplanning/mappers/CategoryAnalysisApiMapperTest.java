@@ -81,9 +81,10 @@ class CategoryAnalysisApiMapperTest {
 		// When: it is converted for the list endpoint
 		CategoryAnalysisSummaryV1 summary = mapper.toSummaryV1(record);
 
-		// Then: the bodies are left out, but the deck link stays because the list offers
-		// "open in Slides" directly
+		// Then: the bodies are left out, but the deck link and template kind stay because the
+		// list offers "open in Slides" directly and each tool filters the rows it owns
 		assertThat(summary.getId()).isEqualTo(31L);
+		assertThat(summary.getTemplateKind()).isEqualTo("STANDARD");
 		assertThat(summary.getTitle()).isEqualTo("Pet Care 2026");
 		assertThat(summary.getCategory()).isEqualTo("Pet Care");
 		assertThat(summary.getSlidesUrl())

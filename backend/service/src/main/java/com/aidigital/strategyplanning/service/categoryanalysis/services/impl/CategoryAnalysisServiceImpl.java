@@ -3,6 +3,7 @@ package com.aidigital.strategyplanning.service.categoryanalysis.services.impl;
 import com.aidigital.strategyplanning.domain.categoryanalysis.entities.CategoryAnalysisEntity;
 import com.aidigital.strategyplanning.domain.categoryanalysis.repositories.CategoryAnalysisRepository;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CategoryAnalysisRecord;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.CategoryAnalysisTemplateKind;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateCategoryAnalysisCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateInDepthDeckCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateStandardDeckCommand;
@@ -10,6 +11,7 @@ import com.aidigital.strategyplanning.service.categoryanalysis.models.GoogleConn
 import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthDraft;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthFieldValue;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthSlideSpec;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.RecordOnePagerCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardConnections;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardDraft;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardFieldValue;
@@ -40,8 +42,6 @@ import java.util.Map;
 public class CategoryAnalysisServiceImpl implements CategoryAnalysisService {
 
 	private static final String STATUS_SUBMITTED = "SUBMITTED";
-	private static final String TEMPLATE_KIND_STANDARD = "STANDARD";
-	private static final String TEMPLATE_KIND_IN_DEPTH = "IN_DEPTH";
 	private static final String DECK_TITLE_SEPARATOR = " — ";
 	private static final String DECK_TITLE_PREFIX = "Category Analysis";
 
@@ -122,7 +122,7 @@ public class CategoryAnalysisServiceImpl implements CategoryAnalysisService {
 				command,
 				deckTitle,
 				slidesUrl,
-				TEMPLATE_KIND_STANDARD,
+				CategoryAnalysisTemplateKind.STANDARD.getCode(),
 				STATUS_SUBMITTED,
 				currentTime.nowLocalDateTime());
 		return categoryAnalysisMapper.toRecord(categoryAnalysisRepository.save(entity));
@@ -172,7 +172,24 @@ public class CategoryAnalysisServiceImpl implements CategoryAnalysisService {
 				command,
 				deckTitle,
 				slidesUrl,
-				TEMPLATE_KIND_IN_DEPTH,
+				CategoryAnalysisTemplateKind.IN_DEPTH.getCode(),
+				STATUS_SUBMITTED,
+				currentTime.nowLocalDateTime());
+		return categoryAnalysisMapper.toRecord(categoryAnalysisRepository.save(entity));
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Carries no {@code @LogUsage} of its own: the One Page Generator already logs
+	 * {@code one-pager.create} for the same user action, and a second event would double-count it.
+	 */
+	@Override
+	@Transactional
+	public CategoryAnalysisRecord recordOnePager(RecordOnePagerCommand command) {
+		CategoryAnalysisEntity entity = categoryAnalysisMapper.toOnePagerEntity(
+				command,
+				CategoryAnalysisTemplateKind.ONE_PAGER.getCode(),
 				STATUS_SUBMITTED,
 				currentTime.nowLocalDateTime());
 		return categoryAnalysisMapper.toRecord(categoryAnalysisRepository.save(entity));

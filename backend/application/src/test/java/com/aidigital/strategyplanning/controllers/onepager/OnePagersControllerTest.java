@@ -187,7 +187,7 @@ class OnePagersControllerTest {
 	void shouldCreateTheDeckForTheCallerTest() throws Exception {
 		// Given: a service that saves the page
 		when(onePagerService.createDeck(any(CreateOnePagerCommand.class)))
-				.thenReturn(new OnePagerDeck("One Page Generator — Automotive — Acme",
+				.thenReturn(new OnePagerDeck(41L, "One Page Generator — Automotive — Acme",
 						"https://docs.google.com/presentation/d/new_1/edit"));
 
 		// When: the reviewed content is posted
@@ -196,8 +196,9 @@ class OnePagersControllerTest {
 				.content("{\"category\":\"Automotive\",\"clientName\":\"Acme\",\"shellVariant\":\"TOP_BAR\","
 						+ "\"content\":" + DRAFT_CONTENT + "}"));
 
-		// Then: 201 with the link, and the command carried the caller, shell, and content
+		// Then: 201 with the recorded row id and the link, and the command carried the caller, shell, and content
 		response.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.id").value(41))
 				.andExpect(jsonPath("$.title").value("One Page Generator — Automotive — Acme"))
 				.andExpect(jsonPath("$.slidesUrl").value("https://docs.google.com/presentation/d/new_1/edit"));
 		ArgumentCaptor<CreateOnePagerCommand> command = ArgumentCaptor.forClass(CreateOnePagerCommand.class);

@@ -1,7 +1,10 @@
 package com.aidigital.strategyplanning.service.onepager.services.impl;
 
+import com.aidigital.strategyplanning.service.categoryanalysis.models.CategoryAnalysisRecord;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.GoogleConnectionStatus;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.RecordOnePagerCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardConnections;
+import com.aidigital.strategyplanning.service.categoryanalysis.services.CategoryAnalysisService;
 import com.aidigital.strategyplanning.service.categoryanalysis.services.GoogleDeckService;
 import com.aidigital.strategyplanning.service.onepager.models.CreateOnePagerCommand;
 import com.aidigital.strategyplanning.service.onepager.models.OnePagerBrief;
@@ -17,9 +20,11 @@ import org.springframework.stereotype.Service;
 /**
  * Default implementation of {@link OnePagerService}.
  *
- * <p>Not transactional anywhere: nothing is persisted, and the Google and OpenAI calls take
- * seconds and must never hold a database connection. The Google connection check is the same one
- * the Category Analysis tools use, since one Clerk Google connection backs every deck tool.
+ * <p>Not transactional anywhere: the Google and OpenAI calls take seconds and must never hold a
+ * database connection. The created page is recorded afterwards in the category-analysis entity
+ * service's own short transaction, so a failed page creation leaves no row behind. The Google
+ * connection check is the same one the Category Analysis tools use, since one Clerk Google
+ * connection backs every deck tool.
  */
 @Service
 @RequiredArgsConstructor
@@ -31,6 +36,7 @@ public class OnePagerServiceImpl implements OnePagerService {
 	private final OnePagerDraftService onePagerDraftService;
 	private final OnePagerDeckService onePagerDeckService;
 	private final GoogleDeckService googleDeckService;
+	private final CategoryAnalysisService categoryAnalysisService;
 
 	@Override
 	@LogUsage(action = "one-pager.connections")
@@ -54,7 +60,9 @@ public class OnePagerServiceImpl implements OnePagerService {
 		String deckTitle = deckTitle(command.category(), command.clientName());
 		String slidesUrl = onePagerDeckService.createDeck(
 				command.createdBy(), deckTitle, command.shellVariant(), command.content());
-		return new OnePagerDeck(deckTitle, slidesUrl);
+		CategoryAnalysisRecord record = categoryAnalysisService.recordOnePager(
+				new RecordOnePagerCommand(deckTitle, command.category(), slidesUrl, command.createdBy()));
+		return new OnePagerDeck(record.id(), deckTitle, slidesUrl);
 	}
 
 	/**

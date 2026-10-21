@@ -9,6 +9,7 @@ import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateStan
 import com.aidigital.strategyplanning.service.categoryanalysis.models.GoogleConnectionStatus;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthDraft;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthFieldValue;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.RecordOnePagerCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardConnections;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardFieldValue;
 import com.aidigital.strategyplanning.service.categoryanalysis.services.GoogleDeckService;
@@ -19,6 +20,7 @@ import com.aidigital.strategyplanning.service.common.error.AppException;
 import com.aidigital.strategyplanning.service.common.time.CurrentTimeImpl;
 import com.aidigital.strategyplanning.service.mappers.categoryanalysis.CategoryAnalysisMapper;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -306,5 +308,38 @@ class CategoryAnalysisServiceImplTest {
 				.createInDepthDeck(command, "https://app.example.com"))
 				.isInstanceOf(IllegalStateException.class);
 		verifyNoInteractions(repository);
+	}
+
+	@Test
+	void shouldRecordAOnePagerAsACategoryAnalysisRowWithoutTouchingGoogleTest() {
+		// Given: a page that already exists in the caller's Drive
+		CategoryAnalysisRepository repository = mock(CategoryAnalysisRepository.class);
+		GoogleDeckService deckService = mock(GoogleDeckService.class);
+		InDepthDeckService inDepthDeckService = mock(InDepthDeckService.class);
+		RecordOnePagerCommand command = new RecordOnePagerCommand("One Page Generator — Pet Care — Acme",
+				"Pet Care", "https://docs.google.com/presentation/d/page_1/edit", "user_1");
+		when(repository.save(org.mockito.ArgumentMatchers.<CategoryAnalysisEntity>any()))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		// When: it is recorded
+		CategoryAnalysisRecord record = new CategoryAnalysisServiceImpl(repository,
+				Mappers.getMapper(CategoryAnalysisMapper.class), mock(StandardDraftService.class),
+				deckService, mock(InDepthDraftService.class), inDepthDeckService,
+				new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl()).recordOnePager(command);
+
+		// Then: the row carries the ONE_PAGER kind, the link, and the creator, with empty narrative
+		// columns, and no Google call was made
+		ArgumentCaptor<CategoryAnalysisEntity> saved = ArgumentCaptor.forClass(CategoryAnalysisEntity.class);
+		verify(repository).save(saved.capture());
+		assertThat(saved.getValue().getTemplateKind()).isEqualTo("ONE_PAGER");
+		assertThat(saved.getValue().getMarketOverview()).isNull();
+		assertThat(record.title()).isEqualTo("One Page Generator — Pet Care — Acme");
+		assertThat(record.category()).isEqualTo("Pet Care");
+		assertThat(record.slidesUrl()).isEqualTo("https://docs.google.com/presentation/d/page_1/edit");
+		assertThat(record.templateKind()).isEqualTo("ONE_PAGER");
+		assertThat(record.status()).isEqualTo("SUBMITTED");
+		assertThat(record.createdBy()).isEqualTo("user_1");
+		assertThat(record.createdAt()).isNotNull();
+		verifyNoInteractions(deckService, inDepthDeckService);
 	}
 }

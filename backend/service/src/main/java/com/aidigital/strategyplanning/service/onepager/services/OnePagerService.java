@@ -8,7 +8,8 @@ import com.aidigital.strategyplanning.service.onepager.models.OnePagerDraft;
 
 /**
  * Service contract for the One Page Generator: connection status, AI drafting, and page creation.
- * One-pagers are not recorded server-side; the created page lives only in the user's Drive.
+ * The created page lives in the user's Drive; a category-analysis row with the {@code ONE_PAGER}
+ * template kind records its title and link for the "recent pages" list.
  */
 public interface OnePagerService {
 
@@ -32,11 +33,11 @@ public interface OnePagerService {
 	OnePagerDraft draft(OnePagerBrief brief);
 
 	/**
-	 * Assembles the one-pager from the master template and saves it as a new Google Slides file
-	 * in the user's Drive.
+	 * Assembles the one-pager from the master template, saves it as a new Google Slides file in
+	 * the user's Drive, then records it as a category-analysis row.
 	 *
 	 * @param command reviewed content, shell choice, and creator
-	 * @return the created page's title and Slides URL
+	 * @return the recorded row's identifier with the page's title and Slides URL
 	 * @throws com.aidigital.strategyplanning.service.common.error.AppException with C003 reason when Google access is
 	 * missing, a Google call fails, or the page cannot be assembled
 	 */

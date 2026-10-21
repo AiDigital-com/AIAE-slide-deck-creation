@@ -15,6 +15,9 @@ export type DraftRequest = components["schemas"]["OnePagerDraftRequestV1"];
 /** The page-creation request posted to the backend. */
 export type CreateRequest = components["schemas"]["CreateOnePagerRequestV1"];
 
+/** One row of the shared category-analyses list; one-pagers are the rows whose kind is ONE_PAGER. */
+export type RecentPage = components["schemas"]["CategoryAnalysisSummaryV1"];
+
 /** State of the caller's Google Drive/Slides connection, shared with the other deck tools. */
 export type GoogleStatus = components["schemas"]["StandardConnectionsV1"]["googleStatus"];
 
@@ -194,6 +197,13 @@ export interface ReviewFieldProps {
 export interface DoneStepProps {
     slidesUrl: string | null;
     onStartOver: () => void;
+}
+
+/** Props of the recent pages list. */
+export interface RecentPagesProps {
+    pages: RecentPage[];
+    loading: boolean;
+    error: boolean;
 }
 
 /** Props of the Google access notice. */

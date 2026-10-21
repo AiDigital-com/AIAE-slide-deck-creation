@@ -1,6 +1,21 @@
 /** TanStack Query key of the One Page Generator connection check. */
 export const ONE_PAGER_CONNECTIONS_QUERY_KEY = ["one-pagers", "connections"] as const;
 
+/**
+ * TanStack Query key of the shared category-analyses list. It is the same key the Category
+ * Analysis builders use, so a page created here also refreshes their "recent" lists.
+ */
+export const CATEGORY_ANALYSES_QUERY_KEY = ["category-analyses"] as const;
+
+/** Template kind the backend records for One Page Generator rows in the category-analyses list. */
+export const ONE_PAGER_TEMPLATE_KIND = "ONE_PAGER";
+
+/** Message shown when the recent pages list cannot be loaded. */
+export const RECENT_PAGES_LOAD_ERROR = "Could not load recent pages.";
+
+/** Message shown when the caller has not created a page yet. */
+export const RECENT_PAGES_EMPTY = "No recent pages.";
+
 /** Message shown when drafting fails without a usable response body. */
 export const ONE_PAGER_DRAFT_FALLBACK_ERROR = "Drafting failed. Check the AI connection and try again.";
 

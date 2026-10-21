@@ -7,6 +7,7 @@ import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateStan
 import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthDraft;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthFieldValue;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthSlideSpec;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.RecordOnePagerCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardConnections;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardDraft;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardFieldValue;
@@ -16,6 +17,9 @@ import java.util.List;
 /**
  * Service contract for the Category Analysis Builder aggregate.
  * Manages creation and retrieval of category analyses for 3-5 slide Google Slides generation.
+ * It is also the only entity service of {@code CategoryAnalysisEntity}, so the One Page Generator
+ * records its pages through {@link #recordOnePager(RecordOnePagerCommand)} rather than through the
+ * repository.
  */
 public interface CategoryAnalysisService {
 
@@ -155,4 +159,14 @@ public interface CategoryAnalysisService {
 	 * missing or deck creation fails
 	 */
 	CategoryAnalysisRecord createInDepthDeck(CreateInDepthDeckCommand command, String publicBaseUrl);
+
+	/**
+	 * Records an already created One Page Generator page as a category-analysis row with the
+	 * {@code ONE_PAGER} template kind, so it appears in the caller's "recent pages" list. The page
+	 * must exist in Drive before this is called: the method only writes the row.
+	 *
+	 * @param command title, category, Slides URL, and creator of the page
+	 * @return the persisted record including its identifier
+	 */
+	CategoryAnalysisRecord recordOnePager(RecordOnePagerCommand command);
 }

@@ -117,11 +117,12 @@ class OnePagerApiMapperTest {
 
 		// When: both are converted
 		OnePagerBrief brief = mapper.toBrief(request);
-		OnePagerDeckV1 deck = mapper.toDeckV1(new OnePagerDeck("Title", "https://docs.google.com/x"));
+		OnePagerDeckV1 deck = mapper.toDeckV1(new OnePagerDeck(41L, "Title", "https://docs.google.com/x"));
 
 		// Then: the brief keeps the module order and the deck its link
 		assertThat(brief).isEqualTo(new OnePagerBrief("Automotive", "Acme", "Sell cars.",
 				List.of(OnePagerModuleKey.KPIS, OnePagerModuleKey.PHOTO)));
+		assertThat(deck.getId()).isEqualTo(41L);
 		assertThat(deck.getTitle()).isEqualTo("Title");
 		assertThat(deck.getSlidesUrl()).isEqualTo("https://docs.google.com/x");
 	}
