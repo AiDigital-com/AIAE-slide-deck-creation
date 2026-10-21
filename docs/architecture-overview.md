@@ -11,7 +11,7 @@ duplicate those rulebooks here.
 - Product owner: @Sheldon Bickel (Slack)
 - Tech contact and operational owner: @Azat Nabiev (Slack)
 - Lifecycle phase: Engineering
-- Last verified against: AIAE convergence migration, coverage finalization
+- Last verified against: port of the In-Depth, One-Page Case Study and One Page Generator surfaces onto the AIAE convergence base
 - Verification evidence: `bash scripts/local-verify.sh`
 - Cache status: enabled
 - MVP usage telemetry: enabled during MVP
@@ -31,8 +31,9 @@ flowchart LR
     user["Strategy / sales user (aidigital.com)"] -->|HTTPS| app["Strategy & Planning"]
     app -->|OIDC / JWT| clerk["Clerk with Google SSO"]
     app -->|SQL| postgres["PostgreSQL"]
-    app -->|Chat + image completions| openai["OpenAI API"]
-    app -->|Slides / Docs / Drive with user OAuth token| google["Google Workspace"]
+    app -->|Chat + image completions, Responses with web_search| openai["OpenAI API"]
+    app -->|Slides / Docs / Drive copy, export, upload with user OAuth token| google["Google Workspace"]
+    google -.->|Fetches donut PNG and case-study icons by public URL| app
     app -.->|Optional capability search, unset by default| refs["Slite / Asana"]
 ```
 
@@ -42,9 +43,10 @@ SPA fallback when the built frontend is served by Spring Boot.
 
 ## Product-specific evidence
 
-- Product capability: generate client-ready case-study decks, category-analysis
-  decks, vertical one-pagers, and RFP outline documents from briefs and uploaded
-  source documents, and triage inbound R&D requests against a spend threshold
+- Product capability: generate client-ready case-study decks (three-page and
+  one-page), category-analysis decks (Standard and In-Depth), single-slide
+  one-pagers, and RFP outline documents from briefs and uploaded source
+  documents, and triage inbound R&D requests against a spend threshold
 - Primary users: AI Digital strategy and sales staff, restricted to the
   `aidigital.com` email domain
 - Primary production flow: user submits a brief or uploads source documents, the
@@ -54,19 +56,23 @@ SPA fallback when the built frontend is served by Spring Boot.
 - Evidence path: `frontend/src/features/strategy-toolkit/ui/StrategyToolkit.tsx`
 
 Five product surfaces are implemented, each as a frontend feature module with a
-matching backend aggregate:
+matching backend aggregate. Two of them open on a template picker with two
+options behind it:
 
-| Surface | Frontend feature | Backend aggregate |
-|---|---|---|
-| Case Study Builder | `case-study-builder` | `casestudy` |
-| Category Analysis Builder | `category-analysis-builder` | `categoryanalysis` |
-| RFP Outline Generator | `rfp-outline-generator` | `rfpoutline` |
-| R&D Request Triage | `rnd-request-triage` | `rndrequest` |
-| One Page Generator | `one-page-generator` | `onepager` |
+| Surface | Options | Frontend feature | Backend aggregate |
+|---|---|---|---|
+| Case Study Builder | Three-page deck (`CaseStudyBuilderPage`); One-Page Case Study (`OnePageCaseStudyPage`) | `case-study-builder` | `casestudy` |
+| Category Analysis Builder | Standard 3-5 slide deck (`CategoryAnalysisBuilderPage`); In-Depth 24-slide "check to include" deck (`InDepthCategoryAnalysisBuilderPage`) | `category-analysis-builder` | `categoryanalysis` |
+| One Page Generator | Single page assembled from shell and body modules | `one-page-generator` | `onepager` |
+| RFP Outline Generator | — | `rfp-outline-generator` | `rfpoutline` |
+| R&D Request Triage | — | `rnd-request-triage` | `rndrequest` |
 
-`strategy-toolkit` is the home hub that lists the surfaces. R&D Request Triage
-is feature-gated by its `available` flag in that hub's `TOOLS` list, and the
-router redirects to `/` while the flag is false.
+`strategy-toolkit` is the home hub that lists the surfaces from its `TOOLS`
+list (`frontend/src/features/strategy-toolkit/constants/tools.ts`). The
+Product Redirection Script card on that hub is an external link to a Slite
+assistant, not an application route. R&D Request Triage is feature-gated by
+its `available` flag in the same list, and the router redirects to `/` while
+the flag is false.
 
 ## Runtime and deployment
 
@@ -106,14 +112,17 @@ diverge. `verify-gates.sh` enforces this.
 
 Controllers implement generated OpenAPI interfaces and delegate to services.
 Repositories are accessed only through their paired entity services. Cross-
-entity orchestration depends on services, not repositories.
+entity orchestration depends on services, not repositories: the One Page
+Generator records its pages through `CategoryAnalysisService.recordOnePager`
+rather than touching `CategoryAnalysisRepository`.
 
 All three canonical boundaries are in place. `backend/observability` owns the
 reusable outbound-call instrumentation (`ExternalClientMetricsInterceptor`,
 `ExternalCallTimer`). `backend/external-services` owns every third-party client
-— OpenAI chat and images, Clerk OAuth, Google Drive/Slides/Docs, and the public
-website reader — each created through `PooledRestClientFactory`, so no HTTP
-client is constructed inside `backend/service` any more.
+— OpenAI chat, images and Responses, Clerk OAuth, Google Drive/Slides/Docs
+including Drive export and upload, and the public website reader — each
+created through `PooledRestClientFactory`, so no HTTP client is constructed
+inside `backend/service` any more.
 
 - Evidence: `backend/pom.xml`
 
@@ -149,9 +158,9 @@ sequenceDiagram
     participant O as OpenAI
     participant CK as Clerk API
     participant G as Google Slides / Drive
-    B->>A: Brief, or up to 10 source documents
+    B->>A: Brief, or up to 10 source files
     A->>S: Validated request
-    S->>S: Extract text from PDF / Office sources (PDFBox, POI)
+    S->>S: Extract text from PDF / Word / PowerPoint / Excel / text / Markdown sources (PDFBox, POI); keep PNG / JPEG / WebP screenshots as image input
     S->>O: Chat completion for the draft content
     O-->>S: Structured draft
     S->>O: Image generation for slide imagery
@@ -168,7 +177,45 @@ Slide images are served from the public, unauthenticated
 `/public/slide-images/{token}` path because Google Slides fetches them
 server-side by URL. Tokens are short-lived and carry no user data.
 
+Source files for Case Study drafting are PDF, Word (`.docx`, `.doc`),
+PowerPoint, Excel, CSV, plain text and Markdown, whose text is extracted by
+`SourceFileTextServiceImpl`, plus PNG, JPEG and WebP screenshots, which
+`SourceImageServiceImpl` passes to the chat completion as `image_url` data URLs.
+
 - Evidence: `backend/service/src/main/java/com/aidigital/strategyplanning/service/categoryanalysis/services/impl/OpenAiSlideImageServiceImpl.java`
+
+### In-Depth Category Analysis (fact-checked, chart-swapped deck)
+
+The In-Depth option drafts only the slides the user checked in the 24-slide
+preview. Drafting goes through the OpenAI Responses API with the built-in
+`web_search` tool (`InDepthOpenAiGatewayImpl` over `OpenAiResponsesClient`) so
+every figure is grounded in a live search, and a single slide can be redrafted
+with the rest of the deck as context. Deck creation is a separate service from
+the Standard one (`GoogleInDepthDeckServiceImpl`, not `GoogleDeckServiceImpl`):
+it copies the In-Depth master, fills the tokens, then redraws slide 8's donut
+as a PNG (`DonutChartRenderer`) hosted on `/public/slide-images/{token}` for
+Google to fetch, and resizes slide 18's bars to their values. The result is
+recorded as a category-analysis row with template kind `IN_DEPTH`.
+
+The entry point is
+`backend/service/src/main/java/com/aidigital/strategyplanning/service/categoryanalysis/services/impl/GoogleInDepthDeckServiceImpl.java`;
+the builder page is `frontend/src/features/category-analysis-builder/ui/InDepthCategoryAnalysisBuilderPage.tsx`.
+
+### One-Page Case Study (text fitted to the template)
+
+The one-page option copies a tokenized one-page master and must keep every
+field inside its fixed text box. `OnePageFieldMeasurerImpl` measures the
+drafted text with the bundled fonts under
+`backend/service/src/main/resources/fonts/case-study`, `OnePageTextFitterImpl`
+and `OnePageFitRevisionPolicyImpl` ask the drafter to shorten what overflows,
+and the user sees the fit result before creating the deck. Fifteen tagged icons
+are swapped from `/case-study-icons/{name}.png`, which Google fetches from the
+app's public URL (`app.case-study.public-asset-base-url` overrides the request
+host for localhost runs).
+
+The entry point is
+`backend/service/src/main/java/com/aidigital/strategyplanning/service/casestudy/services/impl/GoogleOnePageCaseStudyDeckServiceImpl.java`;
+the builder page is `frontend/src/features/case-study-builder/ui/OnePageCaseStudyPage.tsx`.
 
 ### One-pager assembly (PPTX round-trip)
 
@@ -196,7 +243,8 @@ sequenceDiagram
     S->>S: POI: fill the shell header, clone each module's shapes, size the page, drop the other slides
     S->>D: upload/drive/v3/files (PPTX converted to Slides)
     D-->>S: New file id
-    S-->>B: Slides URL
+    S->>S: Record the page as a category-analysis row (template kind ONE_PAGER), own short transaction
+    S-->>B: Row id and Slides URL
 ```
 
 Assembly is split into collaborators, each unit-tested against the bundled
@@ -209,7 +257,9 @@ stable only while the master keeps its structure.
 
 The assembly entry point is
 `backend/service/src/main/java/com/aidigital/strategyplanning/service/onepager/services/impl/OnePagerAssemblyServiceImpl.java`;
-the builder page is `frontend/src/features/one-page-generator/ui/OnePageGeneratorPage.tsx`.
+the builder page is `frontend/src/features/one-page-generator/ui/OnePageGeneratorPage.tsx`,
+whose "Recent Pages" list reads `GET /api/v1/category-analyses` and keeps the
+rows whose `templateKind` is `ONE_PAGER`.
 
 ## API and security boundaries
 
@@ -223,15 +273,19 @@ the builder page is `frontend/src/features/one-page-generator/ui/OnePageGenerato
 - `AuthStartupValidator` refuses to start when required auth configuration is
   blank, so a misconfigured deployment fails loudly rather than serving traffic
   without an identity boundary.
-- Public paths are limited to the SPA, its static assets, the OpenAPI spec,
-  health, and the short-lived slide-image tokens. Everything else requires a
-  company-domain JWT.
+- Public paths are limited to the SPA shell and its client-side routes, its
+  static assets (including the `/in-depth-slides/**`, `/one-pager-modules/**`,
+  `/tool-icons/**` and `/case-study-icons/**` previews and icons under
+  `frontend/public`), the OpenAPI spec, health, and the short-lived
+  slide-image tokens. Everything else requires a company-domain JWT. The list
+  is `AuthConstants.PUBLIC_PATHS`; a route or asset directory missing from it
+  returns 401 on refresh or when Google fetches it.
 - Secrets remain in Replit Secrets, local `.env`, or the target secret manager;
   they are never compiled into frontend assets or committed. The Clerk
   publishable key is public by design and is the only key baked into the SPA.
 
 - Authorization is deliberately flat: the only role is "authenticated
-  `aidigital.com` user". Every one of the four tools is available to every
+  `aidigital.com` user". Every one of the five tools is available to every
   signed-in colleague, and per-user scoping is enforced by data ownership
   instead — each read path queries by `createdBy`, so a caller can only see
   their own case studies, analyses, outlines, and requests. A caller asking for
@@ -249,9 +303,11 @@ the builder page is `frontend/src/features/one-page-generator/ui/OnePageGenerato
 - PostgreSQL is the system of record for briefs, drafts, and triage records.
   Generated decks and documents are owned by Google Drive, in the creating
   user's account; the database stores only their identifiers and URLs.
-- One-pagers are not recorded at all: the One Page Generator returns the new
-  file's title and URL and keeps no row, so the feature needs no table and no
-  migration. Usage is still captured through `@LogUsage` events.
+- One Page Generator pages, Standard decks and In-Depth decks all share the
+  `category_analyses` table, told apart by the `template_kind` column
+  (`STANDARD`, `IN_DEPTH`, `ONE_PAGER`, from `CategoryAnalysisTemplateKind`);
+  a one-pager row keeps only the title, category, link and creator. The
+  ported surfaces therefore added no table and no migration.
 - `backend/migrations` owns eight ordered Liquibase changesets applied from
   `db.changelog-master.xml` at application startup. Changeset `0008` renamed the
   earlier `pov` concept to `rfp-outline`; the old name survives only in that
@@ -317,10 +373,11 @@ never invalidates.
 |---|---|---|---|
 | Clerk | User authentication | OIDC/JWT | Fail closed when token validation or required auth configuration fails |
 | Clerk Backend API | Exchange the session for the user's Google OAuth token | HTTPS with `CLERK_SECRET_KEY` | Request fails; deck generation surfaces the error to the user |
-| OpenAI chat completions | Draft case studies, category analyses, RFP outlines; multimodal input (`image_url` data URLs) is plain request JSON | HTTPS with `OPENAI_API_KEY`, model `gpt-4o` | Blank key means "AI not connected" in the UI; no retry; a completion cut off at the token limit (`finish_reason: length`) is the typed `INCOMPLETE` failure |
+| OpenAI chat completions | Draft case studies (three-page and one-page), Standard category analyses, one-pagers, RFP outlines; multimodal input (`image_url` data URLs for uploaded screenshots) is plain request JSON | HTTPS with `OPENAI_API_KEY`, model `gpt-4o` | Blank key means "AI not connected" in the UI; no retry; a completion cut off at the token limit (`finish_reason: length`) is the typed `INCOMPLETE` failure |
 | OpenAI Responses API (`/responses`) | In-depth category analysis fact-checking with the built-in `web_search` tool (`OpenAiResponsesClient`) | HTTPS with `OPENAI_API_KEY` | No retry; `status: incomplete` is the typed `INCOMPLETE` failure; the concatenated `output_text` plus the raw `output` items (search calls, citations) are returned |
 | OpenAI image generation | Slide imagery, transparent cutout PNGs | HTTPS with `OPENAI_API_KEY`, model `gpt-image-1` | Deck generation proceeds without imagery |
 | Google Slides / Docs / Drive | Copy a master template into the user's Drive and populate it | HTTPS with the end user's Google OAuth token | Request fails; no partial-deck cleanup |
+| Google Slides image fetch (inbound) | Google fetches the In-Depth donut PNG from `/public/slide-images/{token}` and the one-page case-study icons from `/case-study-icons/**` by public URL | Unauthenticated public paths; the base URL is the request host or `CASE_STUDY_PUBLIC_ASSET_BASE_URL` | An unreachable host (for example localhost) leaves the master's placeholder image in place; the deck is still created |
 | Google Drive export / upload | Export a Slides master as PPTX (`files/{id}/export`) and upload an assembled PPTX back as a Slides file (`upload/drive/v3/files?uploadType=multipart`) for the One Page Generator | HTTPS with the end user's Google OAuth token; own pools `drive-export` / `drive-upload` with `app.external.google.transfer-response-timeout` (120s) | Resent on a 5xx up to `app.external.google.transient-retry-attempts` (3) with linear backoff; 4xx and transport failures are final |
 | Slite, Asana | Optional capability search for R&D triage | HTTPS with per-provider token | Unset by default; triage works without them |
 | PostgreSQL | Application persistence | JDBC/TLS in managed environments | Transaction rollback; bounded pool (5 connections on Replit) and query timeouts |
@@ -346,7 +403,13 @@ Two behaviours worth knowing before relying on this in production:
   `max-connections-per-route` calls.
 
 `RFP_OUTLINE_TEMPLATE_DOC_ID` is blank by default, so Google Docs export is
-inoperative until a template is created.
+inoperative until a template is created. The other master templates
+(`CATEGORY_ANALYSIS_TEMPLATE_ID`, `CATEGORY_ANALYSIS_IN_DEPTH_TEMPLATE_ID`,
+`CASE_STUDY_TEMPLATE_PRESENTATION_ID`, `CASE_STUDY_ONE_PAGE_TEMPLATE_ID`,
+`ONE_PAGER_TEMPLATE_ID`) default to the canonical file ids in
+`application.yml`; the Drive transfer ceiling and retry count are
+`APP_EXTERNAL_GOOGLE_TRANSFER_RESPONSE_TIMEOUT` and
+`APP_EXTERNAL_GOOGLE_TRANSIENT_RETRY_ATTEMPTS`.
 
 - Evidence: `backend/external-services/src/main/java/com/aidigital/strategyplanning/external/common/http/PooledRestClientFactory.java`
 
@@ -362,8 +425,9 @@ inoperative until a template is created.
 
 - Every outbound provider call is timed and counted by
   `ExternalClientMetricsInterceptor`, tagged with the client name the pool was
-  created under (`openai-chat`, `openai-images`, `clerk`, `drive`,
-  `google-slides`, `google-docs`, `client-website`).
+  created under (`openai-chat`, `openai-images`, `openai-responses`, `clerk`,
+  `drive`, `drive-export`, `drive-upload`, `google-slides`, `google-docs`,
+  `client-website`).
 
 Operational ownership sits with the tech contact named under "Document status".
 What does not exist yet is tooling rather than ownership: there are no
@@ -385,8 +449,11 @@ is engineering's first operational task and is not a defect in the application.
 | Slide images are hosted on a public unauthenticated path | Google Slides fetches images server-side by URL | Tokens must stay short-lived and unguessable |
 | Java package root is `com.aidigital.strategyplanning`, not a name derived from the repository | Established before the repository was renamed | Do not introduce a second package root to "fix" the mismatch |
 | Package `groupId` and repository name disagree | Same history as above | Cosmetic only; renaming would rewrite every Java file |
-| Authorization is flat; isolation comes from `createdBy` ownership, not roles | Four internal tools shared by one company-domain team; a role model would add a table and a policy layer nothing needs | Adding a genuine admin capability means designing roles from scratch — there is no dormant role model to switch on |
-| One-pagers are assembled from the master's exported PPTX with Apache POI and uploaded as a new Slides file, and nothing is persisted | The Slides API cannot clone shapes across slides, and a one-pager is a throwaway artefact the user keeps in Drive | Shape ids in `OnePagerLayout` must be re-derived if the master is restructured; there is no "recent pages" list for this tool |
+| Authorization is flat; isolation comes from `createdBy` ownership, not roles | Five internal tools shared by one company-domain team; a role model would add a table and a policy layer nothing needs | Adding a genuine admin capability means designing roles from scratch — there is no dormant role model to switch on |
+| One-pagers are assembled from the master's exported PPTX with Apache POI and uploaded as a new Slides file | The Slides API cannot clone shapes across slides, and the master is a component library rather than a finished deck | Shape ids in `OnePagerLayout` must be re-derived if the master is restructured |
+| One-pagers are stored as category-analysis rows with template kind `ONE_PAGER`, not in a table of their own | The list only needs title, category, link and owner, which the existing table already holds; a new aggregate would add a migration and an entity service for one list | `GET /api/v1/category-analyses` returns every kind and each tool filters by `templateKind`; a one-pager row has empty narrative columns |
+| The In-Depth deck service is separate from the Standard one | The two masters differ in slide count, token set, chart handling and drafting engine (Responses with `web_search` vs. chat completions); one service with two modes would branch on nearly every step | Both record into the same table with different template kinds; shared Google plumbing lives in `GoogleSlidesGateway` |
+| Master templates that need images rely on Google reaching the app's public URL | Google Slides fetches images server-side; there is no upload path for a replace-image request | From localhost the donut and case-study icons stay as the master's placeholders unless `CASE_STUDY_PUBLIC_ASSET_BASE_URL` points at a deployed instance |
 | The cache-invalidation mechanism ships complete but with an empty registry | No read path has been profiled; caching an unmeasured workload trades correctness risk for an unproven win | Caching is off for every workflow. Enabling it is a registry entry plus a `publishUpdateEvent` call in the same transaction |
 
 The risks carried into the AIAE migration are closed. Each row records what
