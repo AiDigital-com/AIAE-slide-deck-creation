@@ -71,7 +71,6 @@ public class CaseStudyPromptComposerImpl implements CaseStudyPromptComposer {
 		payload.put("model", properties.getOpenaiModel());
 		payload.set("messages", objectMapper.createArrayNode().add(message));
 		payload.set("response_format", responseFormat);
-		payload.put("temperature", 0.3);
 		return payload.toString();
 	}
 
@@ -116,7 +115,6 @@ public class CaseStudyPromptComposerImpl implements CaseStudyPromptComposer {
 		payload.put("model", properties.getOpenaiModel());
 		payload.set("messages", objectMapper.createArrayNode().add(message));
 		payload.set("response_format", responseFormat);
-		payload.put("temperature", 0.3);
 		return payload.toString();
 	}
 

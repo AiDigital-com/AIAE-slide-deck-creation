@@ -18,6 +18,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RfpOutlinePromptComposerImpl implements RfpOutlinePromptComposer {
 
+	/** Chat Completions key bounding the completion, reasoning tokens included. */
+	private static final String MAX_COMPLETION_TOKENS_KEY = "max_completion_tokens";
+
+	/** Completion budget for a fully detailed deck outline. */
+	private static final int MAX_COMPLETION_TOKENS = 8000;
+
 	private final RfpOutlineProperties properties;
 	private final ObjectMapper objectMapper;
 
@@ -210,11 +216,10 @@ public class RfpOutlinePromptComposerImpl implements RfpOutlinePromptComposer {
 		payload.put("model", properties.getOpenaiModel());
 		payload.set("messages", objectMapper.createArrayNode().add(message));
 		payload.set("response_format", responseFormat);
-		payload.put("temperature", 0.3);
 		// A fully detailed deckOutline (per-section why/questions/flags, full audience/goal
 		// breakouts, tables, closing lists) runs long — give the model ample room so it isn't
 		// cut short and forced to compress detail to fit.
-		payload.put("max_tokens", 8000);
+		payload.put(MAX_COMPLETION_TOKENS_KEY, MAX_COMPLETION_TOKENS);
 		return payload.toString();
 	}
 }

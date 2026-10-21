@@ -44,7 +44,10 @@ class InDepthDraftPromptComposerImplTest {
 		assertThat(root.has("tools")).isFalse();
 		assertThat(root.path("model").asText()).isEqualTo("gpt-test");
 		assertThat(root.path("response_format").path("type").asText()).isEqualTo("json_object");
-		assertThat(root.path("max_tokens").asInt()).isEqualTo(InDepthDraftPromptComposerImpl.MAX_OUTPUT_TOKENS);
+		assertThat(root.has("temperature")).isFalse();
+		assertThat(root.has("max_tokens")).isFalse();
+		assertThat(root.path("max_completion_tokens").asInt())
+				.isEqualTo(InDepthDraftPromptComposerImpl.MAX_OUTPUT_TOKENS);
 		String content = root.path("messages").path(0).path("content").asText();
 		assertThat(content)
 				.contains("Regional Travel")
@@ -87,6 +90,8 @@ class InDepthDraftPromptComposerImplTest {
 		// Then: web_search is enabled and the drafted value and its budget are quoted
 		assertThat(root.path("tools").get(0).path("type").asText()).isEqualTo("web_search");
 		assertThat(root.path("max_output_tokens").asInt()).isEqualTo(InDepthDraftPromptComposerImpl.MAX_OUTPUT_TOKENS);
+		assertThat(root.has("temperature")).isFalse();
+		assertThat(root.has("max_tokens")).isFalse();
 		String input = root.path("input").asText();
 		assertThat(input).contains("Regional Travel").contains(statValue.key()).contains("\"11.9M\"")
 				.contains("max " + registry.maxCharsFor(statValue) + " characters")
@@ -103,6 +108,8 @@ class InDepthDraftPromptComposerImplTest {
 		// Then: JSON output mode, no tools, website excerpt included
 		assertThat(root.has("tools")).isFalse();
 		assertThat(root.path("text").path("format").path("type").asText()).isEqualTo("json_object");
+		assertThat(root.has("temperature")).isFalse();
+		assertThat(root.has("max_tokens")).isFalse();
 		assertThat(root.path("input").asText()).contains("Handmade western boots").contains("alignmentMatches");
 	}
 

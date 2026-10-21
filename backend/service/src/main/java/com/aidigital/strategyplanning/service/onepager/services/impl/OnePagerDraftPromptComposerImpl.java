@@ -19,8 +19,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class OnePagerDraftPromptComposerImpl implements OnePagerDraftPromptComposer {
 
-	/** Output token ceiling generous enough for a page with every module. */
-	public static final int MAX_OUTPUT_TOKENS = 4000;
+	/**
+	 * Completion token ceiling for a page with every module. It also covers the reasoning tokens
+	 * the model spends before answering, so it is larger than the visible output needs.
+	 */
+	public static final int MAX_COMPLETION_TOKENS = 8000;
 
 	/** Fixed process-tracker step count drafted whenever the tracker is included. */
 	public static final int TRACKER_STEP_COUNT = 5;
@@ -37,7 +40,7 @@ public class OnePagerDraftPromptComposerImpl implements OnePagerDraftPromptCompo
 	/** Fixed KPI chip count of spotlight card index 1. */
 	public static final int SPOTLIGHT_CHIP_COUNT = 7;
 
-	private static final double TEMPERATURE = 0.4;
+	private static final String MAX_COMPLETION_TOKENS_KEY = "max_completion_tokens";
 	private static final String RESPONSE_FORMAT_JSON = "json_object";
 	private static final String ROLE_USER = "user";
 	private static final String FIELD = "- ";
@@ -52,8 +55,7 @@ public class OnePagerDraftPromptComposerImpl implements OnePagerDraftPromptCompo
 	public String buildDraftRequestBody(OnePagerBrief brief) {
 		ObjectNode body = objectMapper.createObjectNode();
 		body.put("model", properties.getOpenaiModel());
-		body.put("temperature", TEMPERATURE);
-		body.put("max_tokens", MAX_OUTPUT_TOKENS);
+		body.put(MAX_COMPLETION_TOKENS_KEY, MAX_COMPLETION_TOKENS);
 		body.putObject("response_format").put("type", RESPONSE_FORMAT_JSON);
 		ArrayNode messages = body.putArray("messages");
 		messages.addObject().put("role", ROLE_USER).put("content", buildPrompt(brief));

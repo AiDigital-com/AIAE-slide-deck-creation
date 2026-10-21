@@ -120,7 +120,7 @@ app:
     # AI drafting engine — blank key means "AI not connected" in the UI.
     openai-api-key: ${OPENAI_API_KEY:}
     openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    openai-model: ${OPENAI_MODEL:gpt-4o}
+    openai-model: ${OPENAI_MODEL:gpt-6.1-sol}
     # Master Standard Category Analysis Google Slides template.
     template-presentation-id: ${CATEGORY_ANALYSIS_TEMPLATE_ID:164QKu8KTgpxYYGtX9lGXp-M_5IHXMm-oiGromJtfI3k}
     # Master In-Depth Category Analysis Google Slides template (24-slide layout library).
@@ -219,7 +219,7 @@ app:
     # AI auto-draft from uploaded source documents — blank key means "AI not connected".
     openai-api-key: ${OPENAI_API_KEY:}
     openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    openai-model: ${OPENAI_MODEL:gpt-4o}
+    openai-model: ${OPENAI_MODEL:gpt-6.1-sol}
     # Hard cap on source documents per auto-draft request.
     max-source-files: ${CASE_STUDY_MAX_SOURCE_FILES:10}
   one-pager:
@@ -232,7 +232,7 @@ app:
     # AI drafting from the guidance brief — blank key means "AI not connected".
     openai-api-key: ${OPENAI_API_KEY:}
     openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    openai-model: ${OPENAI_MODEL:gpt-4o}
+    openai-model: ${OPENAI_MODEL:gpt-6.1-sol}
   rfp-outline:
     template-url: ${RFP_OUTLINE_TEMPLATE_URL:}
     # Master template copied into the user's Drive for each generated RFP outline doc.
@@ -244,7 +244,7 @@ app:
     # AI auto-draft from uploaded source documents — blank key means "AI not connected".
     openai-api-key: ${OPENAI_API_KEY:}
     openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    openai-model: ${OPENAI_MODEL:gpt-4o}
+    openai-model: ${OPENAI_MODEL:gpt-6.1-sol}
     # Hard cap on source documents per auto-draft request.
     max-source-files: ${RFP_OUTLINE_MAX_SOURCE_FILES:10}
   rnd-request:

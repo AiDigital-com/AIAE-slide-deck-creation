@@ -106,12 +106,14 @@ class RfpOutlinePromptComposerImplTest {
 		// When: the request body is built
 		String body = service.buildRequestBody(List.of(new SourceDocument("a.pdf", "b")), null);
 
-		// Then: the payload pins model, response format, temperature, and token ceiling
+		// Then: the payload pins model, response format, and the completion ceiling, with no
+		// sampling parameter and no deprecated max_tokens
 		JsonNode payload = readTree(objectMapper, body);
 		assertThat(payload.get("model").asText()).isEqualTo("gpt-4o-mini");
 		assertThat(payload.get("response_format").get("type").asText()).isEqualTo("json_object");
-		assertThat(payload.get("temperature").asDouble()).isEqualTo(0.3);
-		assertThat(payload.get("max_tokens").asInt()).isEqualTo(8000);
+		assertThat(payload.has("temperature")).isFalse();
+		assertThat(payload.has("max_tokens")).isFalse();
+		assertThat(payload.get("max_completion_tokens").asInt()).isEqualTo(8000);
 		assertThat(payload.get("messages").get(0).get("role").asText()).isEqualTo("user");
 	}
 

@@ -29,11 +29,7 @@ public class InDepthDraftPromptComposerImpl implements InDepthDraftPromptCompose
 	 */
 	public static final int MAX_OUTPUT_TOKENS = 16000;
 
-	/**
-	 * Sampling temperature for the knowledge draft, matching the Standard deck.
-	 */
-	public static final double DRAFT_TEMPERATURE = 0.7;
-
+	private static final String MAX_COMPLETION_TOKENS_KEY = "max_completion_tokens";
 	private static final String WEB_SEARCH_TOOL = "web_search";
 	private static final String JSON_OBJECT_FORMAT = "json_object";
 	private static final String ROLE_USER = "user";
@@ -96,8 +92,7 @@ public class InDepthDraftPromptComposerImpl implements InDepthDraftPromptCompose
 		payload.put("model", properties.getOpenaiModel());
 		payload.set("messages", objectMapper.createArrayNode().add(message));
 		payload.set("response_format", responseFormat);
-		payload.put("temperature", DRAFT_TEMPERATURE);
-		payload.put("max_tokens", MAX_OUTPUT_TOKENS);
+		payload.put(MAX_COMPLETION_TOKENS_KEY, MAX_OUTPUT_TOKENS);
 		return payload.toString();
 	}
 

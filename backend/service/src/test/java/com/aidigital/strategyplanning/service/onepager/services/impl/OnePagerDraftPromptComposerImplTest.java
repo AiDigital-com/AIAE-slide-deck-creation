@@ -38,7 +38,11 @@ class OnePagerDraftPromptComposerImplTest {
 		// Then: JSON mode, the model, the token ceiling, and one user message carrying the prompt
 		assertThat(body.path("model").asText()).isEqualTo("gpt-4o");
 		assertThat(body.path("response_format").path("type").asText()).isEqualTo("json_object");
-		assertThat(body.path("max_tokens").asInt()).isEqualTo(OnePagerDraftPromptComposerImpl.MAX_OUTPUT_TOKENS);
+		assertThat(body.has("temperature")).isFalse();
+		assertThat(body.has("max_tokens")).isFalse();
+		assertThat(body.path("max_completion_tokens").asInt())
+				.isEqualTo(OnePagerDraftPromptComposerImpl.MAX_COMPLETION_TOKENS);
+		assertThat(OnePagerDraftPromptComposerImpl.MAX_COMPLETION_TOKENS).isEqualTo(8000);
 		assertThat(body.path("messages")).hasSize(1);
 		assertThat(body.path("messages").path(0).path("role").asText()).isEqualTo("user");
 		assertThat(body.path("messages").path(0).path("content").asText())

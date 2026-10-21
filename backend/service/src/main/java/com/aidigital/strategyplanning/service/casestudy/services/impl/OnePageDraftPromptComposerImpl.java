@@ -31,9 +31,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OnePageDraftPromptComposerImpl implements OnePageDraftPromptComposer {
 
-	/** Sampling temperature: low, so figures are copied rather than paraphrased. */
-	public static final double TEMPERATURE = 0.2;
-
 	private static final String ROLE_KEY = "role";
 	private static final String ROLE_USER = "user";
 	private static final String CONTENT_KEY = "content";
@@ -42,7 +39,6 @@ public class OnePageDraftPromptComposerImpl implements OnePageDraftPromptCompose
 	private static final String RESPONSE_FORMAT_KEY = "response_format";
 	private static final String RESPONSE_FORMAT_TYPE_KEY = "type";
 	private static final String RESPONSE_FORMAT_JSON = "json_object";
-	private static final String TEMPERATURE_KEY = "temperature";
 	private static final String PART_TYPE_KEY = "type";
 	private static final String PART_TYPE_TEXT = "text";
 	private static final String PART_TYPE_IMAGE_URL = "image_url";
@@ -218,7 +214,6 @@ public class OnePageDraftPromptComposerImpl implements OnePageDraftPromptCompose
 		payload.put(MODEL_KEY, properties.getOpenaiModel());
 		payload.set(MESSAGES_KEY, objectMapper.createArrayNode().add(message));
 		payload.putObject(RESPONSE_FORMAT_KEY).put(RESPONSE_FORMAT_TYPE_KEY, RESPONSE_FORMAT_JSON);
-		payload.put(TEMPERATURE_KEY, TEMPERATURE);
 		return payload.toString();
 	}
 

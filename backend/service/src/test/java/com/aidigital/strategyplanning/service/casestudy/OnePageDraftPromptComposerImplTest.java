@@ -61,7 +61,8 @@ class OnePageDraftPromptComposerImplTest {
 		assertThat(content.path(1).path("image_url").path("url").asText()).startsWith("data:image/png;base64,");
 		assertThat(root.path("model").asText()).isEqualTo("gpt-4o");
 		assertThat(root.path("response_format").path("type").asText()).isEqualTo("json_object");
-		assertThat(root.path("temperature").asDouble()).isEqualTo(0.2);
+		assertThat(root.has("temperature")).isFalse();
+		assertThat(root.has("max_tokens")).isFalse();
 	}
 
 	@Test

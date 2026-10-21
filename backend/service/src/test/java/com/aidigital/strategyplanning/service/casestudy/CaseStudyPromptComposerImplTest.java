@@ -66,11 +66,12 @@ class CaseStudyPromptComposerImplTest {
 		JsonNode payload = readTree(service.buildRequestBody(
 				List.of(new SourceDocument("a.pdf", "body")), List.of()));
 
-		// Then: model, JSON response format, and temperature are as the contract expects, and the
+		// Then: model and JSON response format are as the contract expects, and the
 		// user message is a single text part
 		assertThat(payload.get("model").asText()).isEqualTo("gpt-4o-mini");
 		assertThat(payload.get("response_format").get("type").asText()).isEqualTo("json_object");
-		assertThat(payload.get("temperature").asDouble()).isEqualTo(0.3);
+		assertThat(payload.has("temperature")).isFalse();
+		assertThat(payload.has("max_tokens")).isFalse();
 		assertThat(payload.get("messages").get(0).get("role").asText()).isEqualTo("user");
 		assertThat(payload.get("messages").get(0).get("content")).hasSize(1);
 		assertThat(payload.get("messages").get(0).get("content").get(0).get("type").asText())
@@ -134,6 +135,9 @@ class CaseStudyPromptComposerImplTest {
 		assertThat(prompt).contains("Use ONLY facts from the fields; never invent numbers or claims.");
 		assertThat(prompt).contains("- priority_1, priority_2, priority_3");
 		assertThat(prompt).endsWith("Return only the JSON object.");
+		JsonNode mapping = readTree(service.buildTokenMappingRequestBody(command("We cut spend.", "40% cost reduction")));
+		assertThat(mapping.has("temperature")).isFalse();
+		assertThat(mapping.has("max_tokens")).isFalse();
 	}
 
 	@Test

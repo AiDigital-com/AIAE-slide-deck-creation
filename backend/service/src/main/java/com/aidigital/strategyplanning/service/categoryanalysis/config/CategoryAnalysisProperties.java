@@ -24,7 +24,7 @@ public class CategoryAnalysisProperties {
 	/**
 	 * Model used for drafting the analysis content.
 	 */
-	private String openaiModel = "gpt-4o";
+	private String openaiModel = "gpt-6.1-sol";
 
 	/**
 	 * Google Slides presentation ID of the master Standard Category Analysis template.
