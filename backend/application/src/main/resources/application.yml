@@ -222,6 +222,17 @@ app:
     openai-model: ${OPENAI_MODEL:gpt-4o}
     # Hard cap on source documents per auto-draft request.
     max-source-files: ${CASE_STUDY_MAX_SOURCE_FILES:10}
+  one-pager:
+    # One Page Generator master template ("Extended - One Pager Templates"): slides 1-3 are the
+    # header/footer shells, slides 4-6 the body-module library. Only ever exported as PPTX, never
+    # copied or edited; the assembled page is uploaded as a brand-new Slides file.
+    template-presentation-id: ${ONE_PAGER_TEMPLATE_ID:1Ghth9tTCL685cco2c3Dm2w7Avfi9sBlWYdyFSv25jW4}
+    # Clerk secret key — used to fetch the user's Google OAuth token for Drive/Slides.
+    clerk-secret-key: ${CLERK_SECRET_KEY:}
+    # AI drafting from the guidance brief — blank key means "AI not connected".
+    openai-api-key: ${OPENAI_API_KEY:}
+    openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    openai-model: ${OPENAI_MODEL:gpt-4o}
   rfp-outline:
     template-url: ${RFP_OUTLINE_TEMPLATE_URL:}
     # Master template copied into the user's Drive for each generated RFP outline doc.

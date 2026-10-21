@@ -9,6 +9,7 @@ import { OnePageCaseStudyPage } from "../features/case-study-builder/ui/OnePageC
 import { CategoryAnalysisBuilderPage } from "../features/category-analysis-builder/ui/CategoryAnalysisBuilderPage";
 import { InDepthCategoryAnalysisBuilderPage } from "../features/category-analysis-builder/ui/InDepthCategoryAnalysisBuilderPage";
 import { TemplatePickerPage } from "../features/category-analysis-builder/ui/TemplatePickerPage";
+import { OnePageGeneratorPage } from "../features/one-page-generator/ui/OnePageGeneratorPage";
 import { RfpOutlineGeneratorPage } from "../features/rfp-outline-generator/ui/RfpOutlineGeneratorPage";
 import { RndRequestTriagePage } from "../features/rnd-request-triage/ui/RndRequestTriagePage";
 import Login from "../pages/Login";
@@ -18,6 +19,7 @@ import { queryClient } from "./constants/query-client";
 import {
     CASE_STUDY_ROUTES,
     CATEGORY_ANALYSIS_ROUTES,
+    ONE_PAGER_ROUTE,
     RND_REQUEST_TRIAGE_ROUTE,
     isRndRequestTriageAvailable,
 } from "./constants/routes";
@@ -43,6 +45,7 @@ export function AppRoot() {
                                         <Route path={CATEGORY_ANALYSIS_ROUTES.standard} element={<CategoryAnalysisBuilderPage />} />
                                         <Route path={CATEGORY_ANALYSIS_ROUTES.inDepth} element={<InDepthCategoryAnalysisBuilderPage />} />
                                         <Route path="/rfp-outline-generator" element={<RfpOutlineGeneratorPage />} />
+                                        <Route path={ONE_PAGER_ROUTE} element={<OnePageGeneratorPage />} />
                                         <Route
                                             path={RND_REQUEST_TRIAGE_ROUTE}
                                             element={isRndRequestTriageAvailable ? <RndRequestTriagePage /> : <Navigate to="/" replace />}

@@ -54,4 +54,26 @@ public interface GoogleTemplateFileGateway {
 	 * @param action      human-readable action used in error messages
 	 */
 	void fillDocument(String accessToken, String documentId, ArrayNode requests, String action);
+
+	/**
+	 * Exports a Slides master as raw PPTX bytes, for features that assemble a page from its OOXML
+	 * instead of copying it. The master is only read, never changed.
+	 *
+	 * @param accessToken    user's Google OAuth access token
+	 * @param presentationId presentation to export
+	 * @param action         human-readable action used in error messages
+	 * @return the PPTX bytes
+	 */
+	byte[] exportPresentation(String accessToken, String presentationId, String action);
+
+	/**
+	 * Uploads PPTX bytes to the user's Drive as a brand-new native Slides presentation.
+	 *
+	 * @param accessToken user's Google OAuth access token
+	 * @param title       file name for the new presentation
+	 * @param pptxBytes   PPTX bytes to upload
+	 * @param action      human-readable action used in error messages
+	 * @return Drive id of the new presentation
+	 */
+	String uploadPresentation(String accessToken, String title, byte[] pptxBytes, String action);
 }

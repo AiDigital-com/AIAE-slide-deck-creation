@@ -221,4 +221,61 @@ class GoogleTemplateFileGatewayImplTest {
 				.isInstanceOf(AppException.class)
 				.hasMessageContaining("Could not read the one-page case study deck (Google returned HTTP 404)");
 	}
+
+	@Test
+	void shouldExportAPresentationAsPptxBytesTest() {
+		// Given: Drive answers the export with the file's bytes
+		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
+		byte[] pptx = {80, 75, 3, 4};
+		when(workspaceClient.exportDriveFile(TOKEN, TEMPLATE_ID, GoogleTemplateFileGatewayImpl.PPTX_MIME_TYPE))
+				.thenReturn(pptx);
+
+		// When: the master is exported
+		byte[] result = new GoogleTemplateFileGatewayImpl(new ObjectMapper(), workspaceClient)
+				.exportPresentation(TOKEN, TEMPLATE_ID, "read the one-pager master template");
+
+		// Then: the bytes come back untouched
+		assertThat(result).isEqualTo(pptx);
+	}
+
+	@Test
+	void shouldUploadPptxBytesAsANewSlidesFileTest() {
+		// Given: Drive converts the upload and answers with the new file's id
+		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
+		ObjectMapper objectMapper = new ObjectMapper();
+		byte[] pptx = {80, 75, 3, 4};
+		when(workspaceClient.uploadDriveFile(TOKEN, "Page", GoogleTemplateFileGatewayImpl.SLIDES_MIME_TYPE, pptx,
+				GoogleTemplateFileGatewayImpl.PPTX_MIME_TYPE))
+				.thenReturn(objectMapper.createObjectNode().put("id", "new_1"));
+
+		// When: the page is uploaded
+		String id = new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient)
+				.uploadPresentation(TOKEN, "Page", pptx, "save the one-pager to your Google Drive");
+
+		// Then: the caller gets the id of the new Slides file
+		assertThat(id).isEqualTo("new_1");
+	}
+
+	@Test
+	void shouldRejectAnUploadResponseWithoutAFileIdAndNameTheActionOnFailureTest() {
+		// Given: an upload answered without an id, and an export Google refuses
+		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
+		ObjectMapper objectMapper = new ObjectMapper();
+		byte[] pptx = {1};
+		when(workspaceClient.uploadDriveFile(TOKEN, "Page", GoogleTemplateFileGatewayImpl.SLIDES_MIME_TYPE, pptx,
+				GoogleTemplateFileGatewayImpl.PPTX_MIME_TYPE))
+				.thenReturn(objectMapper.createObjectNode());
+		when(workspaceClient.exportDriveFile(TOKEN, TEMPLATE_ID, GoogleTemplateFileGatewayImpl.PPTX_MIME_TYPE))
+				.thenThrow(new GoogleApiException(GoogleApiFailure.HTTP_STATUS, 404, "missing",
+						"Google API returned HTTP 404"));
+		GoogleTemplateFileGatewayImpl gateway = new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient);
+
+		// When-Then: both stop with a message that names what went wrong
+		assertThatThrownBy(() -> gateway.uploadPresentation(TOKEN, "Page", pptx, "save the one-pager"))
+				.isInstanceOf(AppException.class)
+				.hasMessageContaining("Google Drive upload returned no file ID");
+		assertThatThrownBy(() -> gateway.exportPresentation(TOKEN, TEMPLATE_ID, "read the one-pager master template"))
+				.isInstanceOf(AppException.class)
+				.hasMessageContaining("Could not read the one-pager master template (Google returned HTTP 404)");
+	}
 }

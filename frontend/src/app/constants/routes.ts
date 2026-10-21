@@ -8,6 +8,7 @@ import {
     IN_DEPTH_CATEGORY_ANALYSIS_ROUTE,
     STANDARD_CATEGORY_ANALYSIS_ROUTE,
 } from "../../features/category-analysis-builder/constants/templates";
+import { ONE_PAGE_GENERATOR_ROUTE } from "../../features/one-page-generator/constants/routes";
 import { TOOLS } from "../../features/strategy-toolkit/constants/tools";
 
 /** The three Case Study routes: the picker and the two template builders behind it. */
@@ -23,6 +24,9 @@ export const CATEGORY_ANALYSIS_ROUTES = {
     standard: STANDARD_CATEGORY_ANALYSIS_ROUTE,
     inDepth: IN_DEPTH_CATEGORY_ANALYSIS_ROUTE,
 } as const;
+
+/** Route of the One Page Generator builder. */
+export const ONE_PAGER_ROUTE = ONE_PAGE_GENERATOR_ROUTE;
 
 /** Route of the RnD request triage page, which the toolkit card list gates. */
 export const RND_REQUEST_TRIAGE_ROUTE = "/rnd-request-triage";

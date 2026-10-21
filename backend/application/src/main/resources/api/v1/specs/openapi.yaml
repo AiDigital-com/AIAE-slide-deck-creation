@@ -26,6 +26,8 @@ tags:
     description: RnD Request Triage — triage growth-team feature/product requests by deal size and draft a relay-ready response
   - name: RfpOutlines
     description: RFP Outline Generator — draft a point-of-view and response deck outline from an uploaded RFP, and export it to Google Docs
+  - name: OnePagers
+    description: One Page Generator — brief a vertical one-pager and assemble a single Google Slides page from the master template's shell and body modules
 
 paths:
   /api/v1/auth/me:
@@ -1123,6 +1125,145 @@ paths:
                 $ref: "#/components/schemas/AppApiExceptionResponseV1"
         "500":
           description: Exception occurred while creating the deck.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/one-pagers/connections:
+    get:
+      tags: [ OnePagers ]
+      operationId: getOnePagerConnections
+      summary: Report connection status for the One Page Generator
+      description: |
+        Reports whether the AI drafting engine is configured and whether the authenticated
+        user's Google account currently grants Drive & Slides access via Clerk SSO. The same
+        Clerk Google connection backs every deck tool, so the status mirrors the Category
+        Analysis check.
+      security: [ { bearerAuth: [ ] } ]
+      responses:
+        "200":
+          description: Connection status flags.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardConnectionsV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while checking connection status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/one-pagers/drafts:
+    post:
+      tags: [ OnePagers ]
+      operationId: draftOnePager
+      summary: AI-draft a One Page Generator page from a guidance brief
+      description: |
+        Fits a guidance brief into the fixed section structure of the chosen body modules
+        (header, then each module named in moduleOrder). Unlike the Category Analysis drafters,
+        this never uses web search: every fact, figure, and claim is expected to already be in
+        the brief, and the AI only tightens wording into each module's character budgets. The
+        result is meant to be reviewed and edited by the user before the page is created.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Guidance brief plus the body modules to draft, in page order.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnePagerDraftRequestV1"
+      responses:
+        "200":
+          description: Drafted page content, for review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnePagerDraftV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured, or the drafting call failed or came back incomplete.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while drafting the page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/one-pagers/decks:
+    post:
+      tags: [ OnePagers ]
+      operationId: createOnePagerDeck
+      summary: Assemble the One Page Generator page and save it to the user's Google Slides
+      description: |
+        Exports the master template (read-only; the master is never copied or edited), builds
+        the chosen header/footer shell plus the reviewed body modules into one slide, sizes the
+        page to its content, and uploads the result as a brand-new native Google Slides file in
+        the user's Drive. Requires the user's Google account (via Clerk SSO) to grant Drive and
+        Slides access. Nothing is recorded server-side; the page lives only in the user's Drive.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Final reviewed page content, the shell to build onto, and the file title inputs.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOnePagerRequestV1"
+      responses:
+        "201":
+          description: One-pager created in the user's Google Drive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnePagerDeckV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: Google Drive/Slides access not granted, a Google API call failed, or the page could not be assembled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the page.
           content:
             application/json:
               schema:
@@ -2381,6 +2522,378 @@ components:
           description: Final reviewed values for every field of the checked slides.
           items:
             $ref: "#/components/schemas/InDepthFieldValueV1"
+
+    OnePagerModuleKeyV1:
+      type: string
+      description: |
+        A body module of the One Page Generator page, used to describe stacking order.
+        TRACKER — the 5-step process tracker; SOLUTIONS — the 5 core-solution cards;
+        KPIS — the 4 performance-signal tiles; IMAGE_TEXT — an image paired with a section title
+        and paragraph; KEY_TAKEAWAY — a single callout bar; IMPACT_STATS — 3 large
+        percent/multiplier stats with descriptions; CAPABILITY_CARDS — 3 uniform cards each with
+        a title, description, checklist, and footer; SPOTLIGHT_CARDS — 3 intentionally different
+        cards (an image, a KPI-chip cluster, and 3 connected stage-name pills); INSIGHT_CARDS —
+        3 icon-and-insight cards; PHOTO — a standalone full-bleed photo; SOLUTIONS_VISUAL — an
+        optional companion visual beside the core-solution cards, rendered only when SOLUTIONS
+        is also present; MILESTONE_BANNER — a photo banner with a headline and 3 numbered steps.
+      enum: [ TRACKER, SOLUTIONS, KPIS, IMAGE_TEXT, KEY_TAKEAWAY, IMPACT_STATS,
+              CAPABILITY_CARDS, SPOTLIGHT_CARDS, INSIGHT_CARDS, PHOTO, SOLUTIONS_VISUAL, MILESTONE_BANNER ]
+
+    OnePagerShellVariantV1:
+      type: string
+      description: |
+        Which header/footer shell of the master template the page is built onto, matching the
+        master's slides 1-3. BLUE_HEADER — shell 1, blue header block; HERO_GRAPHIC — shell 2,
+        large hero graphic (least body room); TOP_BAR — shell 3, thin top bar.
+      enum: [ BLUE_HEADER, HERO_GRAPHIC, TOP_BAR ]
+
+    OnePagerSolutionV1:
+      type: object
+      additionalProperties: false
+      description: One core-solution card in the One Page Generator body.
+      required: [ title, valueLine, body ]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Short solution name, e.g. "VIN-LEVEL DYNAMIC CREATIVE OPTIMIZATION".
+        valueLine:
+          type: string
+          maxLength: 200
+          description: Short bold value-oriented subhead.
+        body:
+          type: string
+          maxLength: 500
+          description: Explanatory copy, roughly 25-40 words.
+
+    OnePagerKpiV1:
+      type: object
+      additionalProperties: false
+      description: One performance-signal KPI tile (or spotlight KPI chip) in the One Page Generator body.
+      required: [ value, label ]
+      properties:
+        value:
+          type: string
+          maxLength: 20
+          description: Large headline value, e.g. "30%" or "2X". The tile never shrinks its font, so keep it short.
+        label:
+          type: string
+          maxLength: 120
+          description: Short descriptor underneath, e.g. "INCREASED SCHEDULED APPOINTMENTS".
+
+    OnePagerStatV1:
+      type: object
+      additionalProperties: false
+      description: One impact stat in the One Page Generator body.
+      required: [ value, description ]
+      properties:
+        value:
+          type: string
+          maxLength: 20
+          description: Large headline value, e.g. "+45%".
+        description:
+          type: string
+          maxLength: 120
+          description: Short descriptor underneath the value.
+
+    OnePagerCapabilityCardV1:
+      type: object
+      additionalProperties: false
+      description: One capability card in the One Page Generator body.
+      required: [ title, description, bullets, footer ]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Card heading.
+        description:
+          type: string
+          maxLength: 300
+          description: Short intro sentence under the heading.
+        bullets:
+          type: array
+          maxItems: 3
+          description: Up to 3 short checklist lines.
+          items:
+            type: string
+            maxLength: 120
+        footer:
+          type: string
+          maxLength: 200
+          description: Small subtext line at the bottom of the card.
+
+    OnePagerSpotlightCardV1:
+      type: object
+      additionalProperties: false
+      description: |
+        One spotlight card in the One Page Generator body. Unlike OnePagerCapabilityCardV1, the 3
+        slots this feeds are visually distinct (an image, a KPI-chip cluster, and 3 connected
+        stage-name pills), so each slot's decorative visual is cloned from the master as-is;
+        kpiChips and stageNames fill the two visuals that would otherwise show placeholder copy.
+      required: [ title, description, bullets, kpiChips, stageNames ]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Card heading.
+        description:
+          type: string
+          maxLength: 300
+          description: Short intro sentence under the heading.
+        bullets:
+          type: array
+          maxItems: 3
+          description: Up to 3 short checklist lines.
+          items:
+            type: string
+            maxLength: 120
+        kpiChips:
+          type: array
+          maxItems: 7
+          description: Up to 7 small value+label chips. Only meaningful for card index 1 (the KPI-chip cluster); empty for every other card.
+          items:
+            $ref: "#/components/schemas/OnePagerKpiV1"
+        stageNames:
+          type: array
+          maxItems: 3
+          description: Up to 3 short stage/step names. Only meaningful for card index 2 (the stage-name pills); empty for every other card.
+          items:
+            type: string
+            maxLength: 40
+
+    OnePagerInsightV1:
+      type: object
+      additionalProperties: false
+      description: One icon-and-insight card in the One Page Generator body.
+      required: [ title, insight ]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Short card title.
+        insight:
+          type: string
+          maxLength: 300
+          description: Short supporting insight sentence, shown under a static "KEY INSIGHT" label.
+
+    OnePagerMilestoneV1:
+      type: object
+      additionalProperties: false
+      description: One numbered step in the milestone banner.
+      required: [ title, subtext ]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Short step title.
+        subtext:
+          type: string
+          maxLength: 200
+          description: Short supporting subtext under the step title.
+
+    OnePagerDraftRequestV1:
+      type: object
+      additionalProperties: false
+      description: |
+        Guidance brief and the body modules picked in the module gallery, used to AI-draft a
+        One Page Generator page. Each module has one fixed canonical shape (5 tracker steps,
+        5 solution cards, 4 KPI tiles, 3 cards, ...), a known-good pre-sized layout, so drafted
+        text is capped to each field's character budget rather than risking overflow.
+      required: [ category, clientName, guidanceNotes, moduleOrder ]
+      properties:
+        category:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Market category or vertical the page targets, e.g. "Automotive".
+        clientName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Label used in the generated file's title.
+        guidanceNotes:
+          type: string
+          minLength: 1
+          maxLength: 20000
+          description: |
+            The brief: content architecture, exact copy, KPI values, disclaimers. This drafter
+            never researches or fact-checks on its own, so anything factual must be supplied here.
+        moduleOrder:
+          type: array
+          maxItems: 12
+          description: |
+            The body modules to draft, in stacking order top to bottom, as arranged by the user
+            in the picker's live outline. A module is included solely by its presence here;
+            SOLUTIONS_VISUAL is drafted only when SOLUTIONS is also present.
+          items:
+            $ref: "#/components/schemas/OnePagerModuleKeyV1"
+
+    OnePagerDraftV1:
+      type: object
+      additionalProperties: false
+      description: Complete drafted (or reviewed/edited) content for one One Page Generator page.
+      required: [ topicPill, mainTitle, supportingCopy, moduleOrder, processSteps, solutions, kpis,
+                  impactStats, capabilityCards, spotlightCards, insightCards, milestones ]
+      properties:
+        topicPill:
+          type: string
+          maxLength: 60
+          description: Short header pill label, e.g. "AUTOMOTIVE".
+        mainTitle:
+          type: array
+          minItems: 1
+          maxItems: 3
+          description: Header title, one string per line (up to 3 lines).
+          items:
+            type: string
+            maxLength: 120
+        supportingCopy:
+          type: string
+          maxLength: 200
+          description: Header supporting sentence.
+        moduleOrder:
+          type: array
+          maxItems: 12
+          description: |
+            The body modules' stacking order, top to bottom, every module actually in use. Editable
+            in the review step; the page is assembled in this exact order.
+          items:
+            $ref: "#/components/schemas/OnePagerModuleKeyV1"
+        processSectionLabel:
+          type: string
+          maxLength: 120
+          nullable: true
+          description: Small label above the process tracker, e.g. "HOW IT WORKS". Null when processSteps is empty.
+        processSteps:
+          type: array
+          maxItems: 5
+          description: Up to 5 short step words, e.g. "UNDERSTAND". Empty omits the process-tracker module.
+          items:
+            type: string
+            maxLength: 40
+        solutionsSectionLabel:
+          type: string
+          maxLength: 120
+          nullable: true
+          description: Section label above the core-solution cards. Null when solutions is empty.
+        solutions:
+          type: array
+          maxItems: 5
+          description: Up to 5 core-solution cards. Empty omits the solutions module.
+          items:
+            $ref: "#/components/schemas/OnePagerSolutionV1"
+        solutionsVisualLabel:
+          type: string
+          maxLength: 120
+          nullable: true
+          description: |
+            Section label for the optional companion visual beside the core-solution cards (two
+            stacked image placeholders in the master's right column). Null omits it; it renders
+            only alongside solutions, never as a stand-alone stacked section.
+        kpiSectionLabel:
+          type: string
+          maxLength: 120
+          nullable: true
+          description: Section label above the performance-signal tiles. Null when kpis is empty.
+        kpis:
+          type: array
+          maxItems: 4
+          description: Up to 4 performance-signal KPI tiles. Empty omits the performance-signals module.
+          items:
+            $ref: "#/components/schemas/OnePagerKpiV1"
+        kpiDisclaimer:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Small disclaimer under the KPI tiles. Null when kpis is empty.
+        imageTextSectionLabel:
+          type: string
+          maxLength: 120
+          nullable: true
+          description: Section title paired with the image-and-text block. Null when imageTextBody is null.
+        imageTextBody:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Paragraph copy for the image-and-text block. Null omits the module.
+        keyTakeaway:
+          type: string
+          maxLength: 400
+          nullable: true
+          description: Single callout sentence for the key-takeaway bar. Null omits the module.
+        impactStats:
+          type: array
+          maxItems: 3
+          description: 0 or 3 impact stats. Empty omits the module.
+          items:
+            $ref: "#/components/schemas/OnePagerStatV1"
+        capabilityCards:
+          type: array
+          maxItems: 3
+          description: 0 or 3 capability cards. Empty omits the module.
+          items:
+            $ref: "#/components/schemas/OnePagerCapabilityCardV1"
+        spotlightCards:
+          type: array
+          maxItems: 3
+          description: 0 or 3 spotlight cards. Empty omits the module.
+          items:
+            $ref: "#/components/schemas/OnePagerSpotlightCardV1"
+        insightCards:
+          type: array
+          maxItems: 3
+          description: 0 or 3 icon-and-insight cards. Empty omits the module.
+          items:
+            $ref: "#/components/schemas/OnePagerInsightV1"
+        milestoneHeadline:
+          type: string
+          maxLength: 200
+          nullable: true
+          description: Headline for the milestone banner. Null when milestones is empty.
+        milestones:
+          type: array
+          maxItems: 3
+          description: 0 or 3 numbered milestone-banner steps. Empty omits the module.
+          items:
+            $ref: "#/components/schemas/OnePagerMilestoneV1"
+
+    CreateOnePagerRequestV1:
+      type: object
+      additionalProperties: false
+      description: Reviewed content and shell choice used to assemble and save the One Page Generator page.
+      required: [ category, clientName, shellVariant, content ]
+      properties:
+        category:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Market category or vertical the page targets; part of the file title.
+        clientName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Label used in the generated file's title.
+        shellVariant:
+          description: Which header/footer shell to build onto, picked from the shell gallery.
+          allOf:
+            - $ref: "#/components/schemas/OnePagerShellVariantV1"
+        content:
+          description: The reviewed page content to assemble.
+          allOf:
+            - $ref: "#/components/schemas/OnePagerDraftV1"
+
+    OnePagerDeckV1:
+      type: object
+      additionalProperties: false
+      description: The One Page Generator page created in the user's Google Drive.
+      required: [ title, slidesUrl ]
+      properties:
+        title:
+          type: string
+          description: File name the page was saved under in Drive.
+        slidesUrl:
+          type: string
+          description: Edit URL of the new Google Slides file.
 
     RndDecisionV1:
       type: string

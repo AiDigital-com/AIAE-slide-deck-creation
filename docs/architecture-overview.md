@@ -43,8 +43,8 @@ SPA fallback when the built frontend is served by Spring Boot.
 ## Product-specific evidence
 
 - Product capability: generate client-ready case-study decks, category-analysis
-  decks, and RFP outline documents from briefs and uploaded source documents,
-  and triage inbound R&D requests against a spend threshold
+  decks, vertical one-pagers, and RFP outline documents from briefs and uploaded
+  source documents, and triage inbound R&D requests against a spend threshold
 - Primary users: AI Digital strategy and sales staff, restricted to the
   `aidigital.com` email domain
 - Primary production flow: user submits a brief or uploads source documents, the
@@ -53,7 +53,7 @@ SPA fallback when the built frontend is served by Spring Boot.
 - Evidence path: `backend/service/src/main/java/com/aidigital/strategyplanning/service/categoryanalysis/services/impl/GoogleDeckServiceImpl.java`
 - Evidence path: `frontend/src/features/strategy-toolkit/ui/StrategyToolkit.tsx`
 
-Four product surfaces are implemented, each as a frontend feature module with a
+Five product surfaces are implemented, each as a frontend feature module with a
 matching backend aggregate:
 
 | Surface | Frontend feature | Backend aggregate |
@@ -62,6 +62,7 @@ matching backend aggregate:
 | Category Analysis Builder | `category-analysis-builder` | `categoryanalysis` |
 | RFP Outline Generator | `rfp-outline-generator` | `rfpoutline` |
 | R&D Request Triage | `rnd-request-triage` | `rndrequest` |
+| One Page Generator | `one-page-generator` | `onepager` |
 
 `strategy-toolkit` is the home hub that lists the surfaces. R&D Request Triage
 is feature-gated by its `available` flag in that hub's `TOOLS` list, and the
@@ -169,6 +170,47 @@ server-side by URL. Tokens are short-lived and carry no user data.
 
 - Evidence: `backend/service/src/main/java/com/aidigital/strategyplanning/service/categoryanalysis/services/impl/OpenAiSlideImageServiceImpl.java`
 
+### One-pager assembly (PPTX round-trip)
+
+The One Page Generator cannot use copy-then-`batchUpdate`: the Slides API has
+no request that duplicates a shape from one slide onto another, and the master
+("Extended - One Pager Templates") is a component library, not a finished deck.
+The service therefore exports the master as PPTX through Drive, assembles the
+page in memory with Apache POI, and uploads the result as a brand-new Slides
+file. The master itself is never copied or edited.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant S as Service layer
+    participant O as OpenAI
+    participant CK as Clerk API
+    participant D as Google Drive
+    B->>S: Brief plus the body modules in stacking order
+    S->>O: Chat completion (JSON mode, no tools)
+    O-->>S: Drafted copy, capped to each module's character budget
+    S-->>B: Draft for review
+    B->>S: Reviewed content, shell choice
+    S->>CK: Exchange session for the user's Google OAuth token
+    S->>D: files/{master}/export as PPTX
+    S->>S: POI: fill the shell header, clone each module's shapes, size the page, drop the other slides
+    S->>D: upload/drive/v3/files (PPTX converted to Slides)
+    D-->>S: New file id
+    S-->>B: Slides URL
+```
+
+Assembly is split into collaborators, each unit-tested against the bundled
+master (`backend/service/src/test/resources/onepager/one-pager-master.pptx`):
+`OnePagerShapeEditor` (shape lookup, XML cloning, geometry), `OnePagerTextWriter`
+and `OnePagerTextFitter` (style-preserving text with width fitting in the
+bundled title font), `OnePagerHeaderComposer`, one `OnePagerModuleComposer` per
+body module, and `OnePagerPageSizer`. Shape ids live in `OnePagerLayout` and are
+stable only while the master keeps its structure.
+
+The assembly entry point is
+`backend/service/src/main/java/com/aidigital/strategyplanning/service/onepager/services/impl/OnePagerAssemblyServiceImpl.java`;
+the builder page is `frontend/src/features/one-page-generator/ui/OnePageGeneratorPage.tsx`.
+
 ## API and security boundaries
 
 - OpenAPI YAML is the API source of truth. Backend interfaces and frontend
@@ -207,6 +249,9 @@ server-side by URL. Tokens are short-lived and carry no user data.
 - PostgreSQL is the system of record for briefs, drafts, and triage records.
   Generated decks and documents are owned by Google Drive, in the creating
   user's account; the database stores only their identifiers and URLs.
+- One-pagers are not recorded at all: the One Page Generator returns the new
+  file's title and URL and keeps no row, so the feature needs no table and no
+  migration. Usage is still captured through `@LogUsage` events.
 - `backend/migrations` owns eight ordered Liquibase changesets applied from
   `db.changelog-master.xml` at application startup. Changeset `0008` renamed the
   earlier `pov` concept to `rfp-outline`; the old name survives only in that
@@ -276,7 +321,7 @@ never invalidates.
 | OpenAI Responses API (`/responses`) | In-depth category analysis fact-checking with the built-in `web_search` tool (`OpenAiResponsesClient`) | HTTPS with `OPENAI_API_KEY` | No retry; `status: incomplete` is the typed `INCOMPLETE` failure; the concatenated `output_text` plus the raw `output` items (search calls, citations) are returned |
 | OpenAI image generation | Slide imagery, transparent cutout PNGs | HTTPS with `OPENAI_API_KEY`, model `gpt-image-1` | Deck generation proceeds without imagery |
 | Google Slides / Docs / Drive | Copy a master template into the user's Drive and populate it | HTTPS with the end user's Google OAuth token | Request fails; no partial-deck cleanup |
-| Google Drive export / upload | Export a Slides master as PPTX (`files/{id}/export`) and upload an assembled PPTX back as a Slides file (`upload/drive/v3/files?uploadType=multipart`) for the One-Page Generator | HTTPS with the end user's Google OAuth token; own pools `drive-export` / `drive-upload` with `app.external.google.transfer-response-timeout` (120s) | Resent on a 5xx up to `app.external.google.transient-retry-attempts` (3) with linear backoff; 4xx and transport failures are final |
+| Google Drive export / upload | Export a Slides master as PPTX (`files/{id}/export`) and upload an assembled PPTX back as a Slides file (`upload/drive/v3/files?uploadType=multipart`) for the One Page Generator | HTTPS with the end user's Google OAuth token; own pools `drive-export` / `drive-upload` with `app.external.google.transfer-response-timeout` (120s) | Resent on a 5xx up to `app.external.google.transient-retry-attempts` (3) with linear backoff; 4xx and transport failures are final |
 | Slite, Asana | Optional capability search for R&D triage | HTTPS with per-provider token | Unset by default; triage works without them |
 | PostgreSQL | Application persistence | JDBC/TLS in managed environments | Transaction rollback; bounded pool (5 connections on Replit) and query timeouts |
 
@@ -341,6 +386,7 @@ is engineering's first operational task and is not a defect in the application.
 | Java package root is `com.aidigital.strategyplanning`, not a name derived from the repository | Established before the repository was renamed | Do not introduce a second package root to "fix" the mismatch |
 | Package `groupId` and repository name disagree | Same history as above | Cosmetic only; renaming would rewrite every Java file |
 | Authorization is flat; isolation comes from `createdBy` ownership, not roles | Four internal tools shared by one company-domain team; a role model would add a table and a policy layer nothing needs | Adding a genuine admin capability means designing roles from scratch — there is no dormant role model to switch on |
+| One-pagers are assembled from the master's exported PPTX with Apache POI and uploaded as a new Slides file, and nothing is persisted | The Slides API cannot clone shapes across slides, and a one-pager is a throwaway artefact the user keeps in Drive | Shape ids in `OnePagerLayout` must be re-derived if the master is restructured; there is no "recent pages" list for this tool |
 | The cache-invalidation mechanism ships complete but with an empty registry | No read path has been profiled; caching an unmeasured workload trades correctness risk for an unproven win | Caching is off for every workflow. Enabling it is a registry entry plus a `publishUpdateEvent` call in the same transaction |
 
 The risks carried into the AIAE migration are closed. Each row records what

@@ -1,0 +1,967 @@
+/* One Page Generator (block: opg) */
+.opg {
+    padding: var(--space-6);
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+}
+
+.opg__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.opg__back {
+    background: none;
+    border: none;
+    font-size: var(--text-body);
+    color: var(--accent-primary);
+    cursor: pointer;
+    padding: 0;
+    font-weight: 500;
+}
+
+.opg__back:hover {
+    opacity: 0.75;
+}
+
+.opg__breadcrumb {
+    font-size: var(--text-body);
+    color: var(--text-muted);
+}
+
+.opg__title {
+    font-family: var(--font-display);
+    font-size: var(--text-display-title);
+    font-weight: 900;
+    line-height: var(--leading-display);
+    text-transform: uppercase;
+    color: var(--text-heading);
+    margin: 0 0 var(--space-1) 0;
+}
+
+.opg__subtitle {
+    font-size: var(--text-body);
+    color: var(--text-muted);
+    margin: 0 0 var(--space-4) 0;
+}
+
+/* Connection pills */
+.opg__connections {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-5);
+}
+
+.opg__conn {
+    font-size: var(--text-body);
+    font-weight: 600;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+}
+
+.opg__conn--ok {
+    background: var(--surface-success);
+    color: var(--text-success);
+}
+
+.opg__conn--off {
+    background: var(--surface-error);
+    color: var(--text-error);
+}
+
+/* Layout: form, optional live outline, "how it works" */
+.opg__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 17.5rem;
+    gap: var(--space-6);
+    align-items: start;
+}
+
+.opg__layout--with-outline {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 26rem) 15rem;
+    align-items: stretch;
+}
+
+@media (max-width: 68.75rem) {
+    .opg__layout,
+    .opg__layout--with-outline {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+}
+
+.opg__main {
+    min-width: 0;
+}
+
+.opg__aside {
+    min-width: 0;
+}
+
+.opg__aside--how {
+    position: sticky;
+    top: var(--space-6);
+}
+
+.opg__card-panel {
+    background: var(--surface-default);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    box-shadow: var(--shadow-card);
+}
+
+/* Pickers */
+.opg__fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-inline-size: 0;
+}
+
+.opg__legend {
+    font-family: var(--font-display);
+    font-size: var(--text-subhead);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-kicker);
+    color: var(--text-label);
+    padding: 0;
+    margin-bottom: var(--space-2);
+}
+
+.opg__picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10.625rem, 1fr));
+    gap: var(--space-3);
+}
+
+.opg__picker--shells {
+    grid-template-columns: repeat(auto-fill, minmax(13.75rem, 1fr));
+}
+
+.opg__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-default);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.opg__card:hover {
+    border-color: var(--border-strong);
+}
+
+.opg__card--checked {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 0.125rem var(--focus-ring);
+}
+
+.opg__card--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.opg__thumb {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 7.5rem;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: var(--border-hairline) solid var(--border-default);
+    background: var(--surface-muted);
+    padding: var(--space-2);
+}
+
+.opg__thumb--shell {
+    min-height: 10rem;
+}
+
+.opg__thumb-img {
+    display: block;
+    max-width: 100%;
+    max-height: 13.75rem;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.opg__card-input {
+    position: absolute;
+    top: var(--space-1-5);
+    left: var(--space-1-5);
+    width: 1.125rem;
+    height: 1.125rem;
+    accent-color: var(--accent-primary);
+    cursor: pointer;
+}
+
+.opg__card-caption {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.opg__card-title {
+    font-size: var(--text-body);
+    font-weight: 600;
+    color: var(--text-heading);
+}
+
+.opg__card-desc {
+    font-size: var(--text-pill);
+    color: var(--text-muted);
+}
+
+/* Fields */
+.opg__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.opg__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.opg__pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+}
+
+@media (max-width: 40rem) {
+    .opg__pair {
+        grid-template-columns: 1fr;
+    }
+}
+
+.opg__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-subtle);
+}
+
+.opg__group-title {
+    margin: 0;
+    font-size: var(--text-body);
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+.opg__label {
+    font-size: var(--text-body);
+    font-weight: 500;
+    color: var(--text-heading);
+}
+
+.opg__required {
+    color: var(--accent-danger);
+}
+
+.opg__input,
+.opg__textarea {
+    width: 100%;
+    max-inline-size: 100%;
+    box-sizing: border-box;
+    height: var(--control-height);
+    padding: 0 var(--space-3);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-md);
+    font-size: var(--text-body);
+    font-family: inherit;
+    color: var(--text-default);
+    background: var(--surface-default);
+    transition: border-color 0.15s ease;
+}
+
+.opg__textarea {
+    height: auto;
+    padding: var(--space-2) var(--space-3);
+    resize: vertical;
+    line-height: 1.45;
+}
+
+.opg__input:focus,
+.opg__textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 0.1875rem var(--focus-ring);
+}
+
+.opg__input--invalid {
+    border-color: var(--accent-danger);
+}
+
+.opg__field-error {
+    margin: 0;
+    font-size: var(--text-pill);
+    color: var(--text-error);
+}
+
+.opg__hint {
+    font-size: var(--text-pill);
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.opg__blocking {
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--surface-accent);
+    color: var(--text-default);
+    font-size: var(--text-body);
+    font-weight: 500;
+}
+
+/* Review */
+.opg__review-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.opg__review-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-section);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-display);
+    color: var(--text-heading);
+}
+
+.opg__review-sub {
+    margin: 0;
+    font-size: var(--text-pill);
+    color: var(--text-muted);
+}
+
+.opg__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: var(--border-hairline) solid var(--border-default);
+}
+
+.opg__section-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-subhead);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-kicker);
+    color: var(--text-label);
+}
+
+/* Notices */
+.opg__notice {
+    background: var(--surface-muted);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+}
+
+.opg__notice--warning {
+    background: var(--surface-warning);
+    border-color: var(--border-warning);
+}
+
+.opg__notice-title {
+    margin: 0 0 var(--space-1);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: var(--text-subhead);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-display);
+    color: var(--text-heading);
+}
+
+.opg__notice-body {
+    margin: 0;
+    font-size: var(--text-body);
+    color: var(--text-muted);
+}
+
+.opg__notice-action {
+    margin-top: var(--space-3);
+    background: var(--surface-default);
+    color: var(--accent-primary);
+    border: var(--border-hairline) solid var(--accent-primary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-body);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.opg__notice-action:hover {
+    background: var(--surface-accent);
+}
+
+/* Actions */
+.opg__actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.opg__submit,
+.opg__slides-link {
+    min-height: var(--control-height);
+    padding: var(--space-2) var(--space-6);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: var(--accent-primary);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--text-table-head);
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.opg__submit:hover:not(:disabled),
+.opg__slides-link:hover {
+    background: var(--accent-primary-hover);
+}
+
+.opg__submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.opg__secondary {
+    min-height: var(--control-height);
+    padding: var(--space-2) var(--space-4);
+    background: var(--surface-default);
+    color: var(--text-heading);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-md);
+    font-size: var(--text-table-head);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.opg__secondary:hover:not(:disabled) {
+    background: var(--surface-muted);
+    border-color: var(--border-strong);
+}
+
+.opg__secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Success */
+.opg__success {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--surface-success);
+    border: var(--border-hairline) solid var(--border-success);
+    border-radius: var(--radius-md);
+}
+
+.opg__success-icon {
+    color: var(--text-success);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.opg__success-text {
+    min-width: 0;
+}
+
+.opg__success-title {
+    margin: 0 0 var(--space-1) 0;
+    font-weight: 600;
+    font-size: var(--text-body);
+    color: var(--text-heading);
+}
+
+.opg__success-body {
+    margin: 0;
+    font-size: var(--text-body);
+    color: var(--text-muted);
+}
+
+/* "How it works" */
+.opg__aside-card {
+    background: var(--surface-default);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-card);
+}
+
+.opg__aside-title {
+    font-family: var(--font-display);
+    font-size: var(--text-section);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-display);
+    color: var(--text-heading);
+    margin: 0 0 var(--space-3) 0;
+    padding-bottom: var(--space-3);
+    border-bottom: var(--border-hairline) solid var(--border-default);
+}
+
+.opg__steps {
+    margin: 0;
+    padding-left: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.opg__step {
+    font-size: var(--text-body);
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.opg__step--active {
+    color: var(--text-heading);
+    font-weight: 600;
+}
+
+/* Live outline: sticky panel with the shell canvas and the overflow tray */
+.opg__outline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    position: sticky;
+    top: var(--space-6);
+    max-height: calc(100vh - var(--space-10));
+    overflow-y: auto;
+    padding: var(--space-4);
+    background: var(--surface-default);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+}
+
+.opg__outline-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-section);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-display);
+    color: var(--text-heading);
+}
+
+.opg__outline-body {
+    margin: 0;
+    font-size: var(--text-pill);
+    color: var(--text-muted);
+}
+
+/* Sized by width with the page's live aspect ratio; the ratio is set inline per render from
+   the computed page height, so the preview grows and shrinks exactly like the real output. */
+.opg__canvas {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: var(--border-hairline) solid var(--border-default);
+    background: var(--surface-default);
+}
+
+/* Header and footer crops pin to their own edges at their intrinsic height, so each renders at
+   its real size however tall the page is; the body fill between them is the canvas background. */
+.opg__canvas-bg {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+}
+
+.opg__canvas-bg--header {
+    top: 0;
+}
+
+.opg__canvas-bg--footer {
+    bottom: 0;
+}
+
+.opg__canvas-zone {
+    position: absolute;
+    inset: 0;
+}
+
+/* `outline`, not `border`: a border eats into the block's computed size and visibly distorts
+   short image rows (the KPI tiles) while an outline paints outside the box. */
+.opg__block {
+    position: absolute;
+    border-radius: 0.1875rem;
+    outline: 0.09375rem solid hsl(var(--primary) / 75%);
+    outline-offset: -0.09375rem;
+    cursor: grab;
+    touch-action: none;
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+}
+
+.opg__block:hover {
+    outline-color: var(--accent-primary);
+    box-shadow: var(--shadow-card-hover);
+}
+
+.opg__block:active {
+    cursor: grabbing;
+}
+
+.opg__block--dragging {
+    opacity: 0.55;
+    z-index: 10;
+}
+
+.opg__gap {
+    position: absolute;
+    left: 4%;
+    right: 4%;
+    height: 0.625rem;
+    transform: translateY(-50%);
+    border-radius: var(--radius-full);
+    background: transparent;
+    border: 0.125rem dashed hsl(var(--primary) / 40%);
+    z-index: 5;
+}
+
+.opg__gap--over {
+    height: 0.875rem;
+    background: hsl(var(--primary) / 20%);
+    border: 0.125rem solid hsl(var(--primary) / 95%);
+}
+
+/* Module previews: real crops from the master, filling their block */
+.opg__pv {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface-default);
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.opg__pv-photo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+}
+
+/* Card height : gap ratio matches the backend's fixed solution-card spacing (1,150,000 : 150,000). */
+.opg__pv--solution-stack {
+    gap: 2.97%;
+}
+
+.opg__pv-solution-card {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    object-fit: contain;
+    object-position: top;
+    background: var(--surface-default);
+    border-radius: 0.375rem;
+}
+
+/* Tile gap matches the backend's KPI row gap as a fraction of the row's total width. */
+.opg__pv--kpi-row {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 2.26%;
+}
+
+.opg__pv-kpi-tile {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    object-fit: fill;
+}
+
+.opg__pv--image-text {
+    gap: 3%;
+}
+
+.opg__pv-image-text-top {
+    display: block;
+    width: 100%;
+    min-height: 0;
+    flex: 77 1 0%;
+    object-fit: fill;
+}
+
+.opg__pv-image-text-bottom {
+    flex: 23 1 0%;
+    min-height: 0;
+    border-radius: 0.375rem;
+    background: var(--surface-accent);
+}
+
+.opg__block-remove {
+    position: absolute;
+    top: 0.1875rem;
+    right: 0.1875rem;
+    width: 1.125rem;
+    height: 1.125rem;
+    line-height: 1;
+    border-radius: var(--radius-full);
+    border: none;
+    background: hsl(var(--foreground) / 60%);
+    color: var(--text-on-accent);
+    font-size: var(--text-body);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease, background 0.15s ease;
+    padding: 0;
+}
+
+.opg__block:hover .opg__block-remove {
+    opacity: 1;
+}
+
+.opg__block-remove:hover {
+    background: hsl(var(--status-error) / 92%);
+}
+
+/* The flashing recommended slot for the solutions companion visual */
+.opg__slot {
+    position: absolute;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1-5);
+    border-radius: 0.1875rem;
+    border: 0.09375rem dashed hsl(var(--brand-lime) / 95%);
+    animation: opg-slot-flash 1.6s ease-in-out infinite;
+    text-align: center;
+    padding: var(--space-1);
+}
+
+@keyframes opg-slot-flash {
+    0%,
+    100% {
+        background: hsl(var(--brand-lime) / 16%);
+    }
+
+    50% {
+        background: hsl(var(--brand-lime) / 38%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opg__slot {
+        animation: none;
+        background: hsl(var(--brand-lime) / 24%);
+    }
+}
+
+.opg__slot--over {
+    animation: none;
+    background: hsl(var(--brand-lime) / 50%);
+}
+
+.opg__slot--reject {
+    animation: none;
+    border-color: hsl(var(--status-error) / 90%);
+    background: hsl(var(--status-error) / 20%);
+}
+
+.opg__slot-hint {
+    font-size: var(--text-badge);
+    font-weight: 700;
+    color: var(--text-default);
+    line-height: 1.15;
+}
+
+.opg__slot-add {
+    font-size: var(--text-badge);
+    font-weight: 700;
+    padding: 0.125rem var(--space-2);
+    border-radius: var(--radius-full);
+    border: none;
+    background: var(--accent-primary);
+    color: var(--text-on-accent);
+    cursor: pointer;
+}
+
+/* Dim the canvas while an invalid drop target is hovered */
+.opg__canvas--reject::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    background: hsl(var(--background) / 55%);
+    pointer-events: none;
+}
+
+.opg__toast {
+    position: absolute;
+    left: 50%;
+    bottom: var(--space-2);
+    transform: translateX(-50%);
+    z-index: 8;
+    max-width: 90%;
+    background: hsl(var(--foreground) / 92%);
+    color: var(--text-on-accent);
+    font-size: var(--text-pill);
+    font-weight: 600;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    text-align: center;
+    box-shadow: var(--shadow-soft);
+}
+
+.opg__canvas-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0 12%;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--text-body);
+    pointer-events: none;
+}
+
+/* Overflow tray */
+.opg__tray {
+    flex-shrink: 0;
+    padding-top: var(--space-2);
+    border-top: var(--border-hairline) dashed var(--border-default);
+}
+
+.opg__tray-title {
+    font-family: var(--font-display);
+    font-size: var(--text-table-head);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-display);
+    color: var(--text-muted);
+    margin-bottom: var(--space-1-5);
+}
+
+.opg__tray-zone {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+    min-height: 2.25rem;
+}
+
+.opg__tray-empty {
+    margin: 0;
+    font-size: var(--text-body);
+    color: var(--text-muted);
+}
+
+.opg__tray-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1-5) var(--space-2);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--surface-default);
+    cursor: grab;
+    touch-action: none;
+}
+
+.opg__tray-row:active {
+    cursor: grabbing;
+}
+
+.opg__tray-row--dragging {
+    opacity: 0.5;
+}
+
+.opg__tray-handle {
+    color: var(--text-muted);
+    font-size: var(--text-subhead);
+    line-height: 1;
+    user-select: none;
+}
+
+.opg__tray-swatch {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    background: var(--accent-primary);
+    color: var(--text-on-accent);
+    font-size: var(--text-pill);
+    font-weight: 700;
+}
+
+.opg__tray-label {
+    font-size: var(--text-body);
+    font-weight: 500;
+    min-width: 0;
+}
+
+.opg__tray-remove {
+    margin-left: auto;
+    width: 1.125rem;
+    height: 1.125rem;
+    line-height: 1;
+    border-radius: var(--radius-full);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--text-body);
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.opg__tray-remove:hover {
+    background: hsl(var(--status-error) / 12%);
+    color: var(--accent-danger);
+}
