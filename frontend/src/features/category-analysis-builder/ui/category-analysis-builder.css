@@ -834,3 +834,144 @@
     font-size: var(--text-pill);
     color: var(--text-error);
 }
+
+/* Template picker */
+.cab__template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+    gap: var(--space-5);
+    max-width: 56.25rem;
+}
+
+.cab__template-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    text-align: left;
+    background: var(--surface-default);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: var(--shadow-card);
+}
+
+.cab__template-card:hover {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 0.1875rem var(--focus-ring);
+}
+
+.cab__template-title {
+    font-family: var(--font-display);
+    font-size: var(--text-section);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-display);
+    color: var(--text-heading);
+}
+
+.cab__template-desc {
+    font-size: var(--text-body);
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.cab__template-cta {
+    margin-top: var(--space-2);
+    font-size: var(--text-body);
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+/* In-Depth "check to include" slide checklist */
+.cab__checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10.625rem, 1fr));
+    gap: var(--space-3);
+    max-height: 40rem;
+    overflow-y: auto;
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+}
+
+.cab__checklist-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+    cursor: pointer;
+    border: 0.125rem solid transparent;
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.cab__checklist-card:hover {
+    background: var(--surface-muted);
+}
+
+.cab__checklist-card--checked {
+    border-color: var(--accent-primary);
+    background: var(--surface-accent-soft);
+}
+
+.cab__checklist-thumb {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: var(--border-hairline) solid var(--border-default);
+    background: var(--surface-muted);
+}
+
+.cab__checklist-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-inline-size: 100%;
+    object-fit: cover;
+}
+
+.cab__checklist-checkbox {
+    position: absolute;
+    top: var(--space-1-5);
+    left: var(--space-1-5);
+    width: 1.125rem;
+    height: 1.125rem;
+    cursor: pointer;
+    accent-color: var(--accent-primary);
+    box-shadow: 0 0 0 0.125rem var(--surface-default);
+    border-radius: var(--radius-sm);
+}
+
+.cab__checklist-caption {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.cab__checklist-num {
+    flex-shrink: 0;
+    font-size: var(--text-pill);
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.cab__checklist-title {
+    font-size: var(--text-pill);
+    line-height: 1.35;
+    color: var(--text-default);
+    overflow-wrap: anywhere;
+}
+
+.cab__field-shared {
+    font-weight: 400;
+    font-style: italic;
+    color: var(--text-muted);
+}

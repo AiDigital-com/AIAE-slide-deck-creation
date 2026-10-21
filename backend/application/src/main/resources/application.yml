@@ -123,6 +123,8 @@ app:
     openai-model: ${OPENAI_MODEL:gpt-4o}
     # Master Standard Category Analysis Google Slides template.
     template-presentation-id: ${CATEGORY_ANALYSIS_TEMPLATE_ID:164QKu8KTgpxYYGtX9lGXp-M_5IHXMm-oiGromJtfI3k}
+    # Master In-Depth Category Analysis Google Slides template (24-slide layout library).
+    in-depth-template-presentation-id: ${CATEGORY_ANALYSIS_IN_DEPTH_TEMPLATE_ID:1BovwD1sUrLHk6eTjrvKmPLF6L_-M0mOo93YGP1UJ2Ac}
     # Clerk secret key — used to fetch the user's Google OAuth token for Drive/Slides.
     clerk-secret-key: ${CLERK_SECRET_KEY:}
     # Friendly, on-vertical slide images generated at deck-creation time.

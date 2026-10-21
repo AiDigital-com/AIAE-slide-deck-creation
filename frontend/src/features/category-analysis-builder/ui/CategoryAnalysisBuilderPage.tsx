@@ -17,6 +17,7 @@ import {
     REDRAFT_FALLBACK_ERROR,
     SLIDE_TITLES,
 } from "../constants/brief";
+import { CATEGORY_ANALYSIS_PICKER_ROUTE } from "../constants/templates";
 import type {
     BriefFieldErrors,
     BriefState,
@@ -266,10 +267,14 @@ export function CategoryAnalysisBuilderPage() {
         <AppShell appName="Strategy Toolkit">
             <div className="cab">
                 <div className="cab__nav">
-                    <button type="button" className="cab__back" onClick={() => navigate("/")}>
+                    <button
+                        type="button"
+                        className="cab__back"
+                        onClick={() => navigate(CATEGORY_ANALYSIS_PICKER_ROUTE)}
+                    >
                         ← Back
                     </button>
-                    <span className="cab__breadcrumb">Strategy / Category Analysis</span>
+                    <span className="cab__breadcrumb">Strategy / Category Analysis / Standard</span>
                 </div>
 
                 <h1 className="cab__title">Category Analysis Builder</h1>

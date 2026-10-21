@@ -4,11 +4,16 @@ import com.aidigital.strategyplanning.domain.categoryanalysis.entities.CategoryA
 import com.aidigital.strategyplanning.domain.categoryanalysis.repositories.CategoryAnalysisRepository;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CategoryAnalysisRecord;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateCategoryAnalysisCommand;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateInDepthDeckCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateStandardDeckCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.GoogleConnectionStatus;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthDraft;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthFieldValue;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardConnections;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardFieldValue;
 import com.aidigital.strategyplanning.service.categoryanalysis.services.GoogleDeckService;
+import com.aidigital.strategyplanning.service.categoryanalysis.services.InDepthDeckService;
+import com.aidigital.strategyplanning.service.categoryanalysis.services.InDepthDraftService;
 import com.aidigital.strategyplanning.service.categoryanalysis.services.StandardDraftService;
 import com.aidigital.strategyplanning.service.common.error.AppException;
 import com.aidigital.strategyplanning.service.common.time.CurrentTimeImpl;
@@ -52,7 +57,7 @@ class CategoryAnalysisServiceImplTest {
 		// When: it is created
 		CategoryAnalysisRecord record = new CategoryAnalysisServiceImpl(repository,
 				Mappers.getMapper(CategoryAnalysisMapper.class), draftService, deckService,
-				new CurrentTimeImpl()).create(command);
+				mock(InDepthDraftService.class), mock(InDepthDeckService.class), new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl()).create(command);
 
 		// Then: the row is saved as submitted with no deck, and no Google call was made
 		assertThat(record.title()).isEqualTo("Pet Care 2026");
@@ -79,7 +84,8 @@ class CategoryAnalysisServiceImplTest {
 		// When: the deck is created
 		CategoryAnalysisRecord record = new CategoryAnalysisServiceImpl(repository,
 				Mappers.getMapper(CategoryAnalysisMapper.class), mock(StandardDraftService.class),
-				deckService, new CurrentTimeImpl())
+				deckService, mock(InDepthDraftService.class), mock(InDepthDeckService.class),
+				new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl())
 				.createStandardDeck(command, "https://app.example.com");
 
 		// Then: the deck title the user sees in Drive names the category and the client, and the
@@ -107,7 +113,8 @@ class CategoryAnalysisServiceImplTest {
 		// When-Then: nothing is persisted, so no analysis links to a deck that was never created
 		assertThatThrownBy(() -> new CategoryAnalysisServiceImpl(repository,
 				Mappers.getMapper(CategoryAnalysisMapper.class), mock(StandardDraftService.class),
-				deckService, new CurrentTimeImpl())
+				deckService, mock(InDepthDraftService.class), mock(InDepthDeckService.class),
+				new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl())
 				.createStandardDeck(command, "https://app.example.com"))
 				.isInstanceOf(IllegalStateException.class);
 		verifyNoInteractions(repository);
@@ -126,7 +133,7 @@ class CategoryAnalysisServiceImplTest {
 		StandardConnections connections = new CategoryAnalysisServiceImpl(
 				mock(CategoryAnalysisRepository.class),
 				Mappers.getMapper(CategoryAnalysisMapper.class), draftService, deckService,
-				new CurrentTimeImpl()).getStandardConnections("user_1");
+				mock(InDepthDraftService.class), mock(InDepthDeckService.class), new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl()).getStandardConnections("user_1");
 
 		// Then: the UI can let the user start
 		assertThat(connections.aiConnected()).isTrue();
@@ -147,7 +154,7 @@ class CategoryAnalysisServiceImplTest {
 		StandardConnections connections = new CategoryAnalysisServiceImpl(
 				mock(CategoryAnalysisRepository.class),
 				Mappers.getMapper(CategoryAnalysisMapper.class), draftService, deckService,
-				new CurrentTimeImpl()).getStandardConnections("user_1");
+				mock(InDepthDraftService.class), mock(InDepthDeckService.class), new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl()).getStandardConnections("user_1");
 
 		// Then: "connected" is false even though a grant exists, and the precise reason is
 		// carried through so the UI can say "reconnect" rather than "sign in"
@@ -170,7 +177,8 @@ class CategoryAnalysisServiceImplTest {
 		// When: the list is requested
 		List<CategoryAnalysisRecord> records = new CategoryAnalysisServiceImpl(repository,
 				Mappers.getMapper(CategoryAnalysisMapper.class), mock(StandardDraftService.class),
-				mock(GoogleDeckService.class), new CurrentTimeImpl()).listByUser("user_1");
+				mock(GoogleDeckService.class), mock(InDepthDraftService.class),
+				mock(InDepthDeckService.class), new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl()).listByUser("user_1");
 
 		// Then: the query is scoped to the caller and the order is preserved
 		assertThat(records).extracting(CategoryAnalysisRecord::title)
@@ -190,7 +198,8 @@ class CategoryAnalysisServiceImplTest {
 		// When: it is fetched by id
 		CategoryAnalysisRecord record = new CategoryAnalysisServiceImpl(repository,
 				Mappers.getMapper(CategoryAnalysisMapper.class), mock(StandardDraftService.class),
-				mock(GoogleDeckService.class), new CurrentTimeImpl()).getById(5L, "user_1");
+				mock(GoogleDeckService.class), mock(InDepthDraftService.class),
+				mock(InDepthDeckService.class), new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl()).getById(5L, "user_1");
 
 		// Then: the caller gets their own row
 		assertThat(record.id()).isEqualTo(5L);
@@ -206,9 +215,96 @@ class CategoryAnalysisServiceImplTest {
 		// When-Then: "not found" rather than "forbidden", which would confirm the row exists
 		assertThatThrownBy(() -> new CategoryAnalysisServiceImpl(repository,
 				Mappers.getMapper(CategoryAnalysisMapper.class), mock(StandardDraftService.class),
-				mock(GoogleDeckService.class), new CurrentTimeImpl()).getById(5L, "user_2"))
+				mock(GoogleDeckService.class), mock(InDepthDraftService.class),
+				mock(InDepthDeckService.class), new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl()).getById(5L, "user_2"))
 				.isInstanceOf(AppException.class)
 				.satisfies(e -> assertThat(((AppException) e).getValidationMessage().getCode())
 						.isEqualTo("C001"));
+	}
+
+	@Test
+	void shouldServeTheInDepthSlideCatalogFromTheRegistryTest() {
+		// Given: the aggregate wired with the real registry
+		CategoryAnalysisServiceImpl service = new CategoryAnalysisServiceImpl(
+				mock(CategoryAnalysisRepository.class), Mappers.getMapper(CategoryAnalysisMapper.class),
+				mock(StandardDraftService.class), mock(GoogleDeckService.class), mock(InDepthDraftService.class),
+				mock(InDepthDeckService.class), new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl());
+
+		// When-Then: all 24 slides are listed in deck order
+		assertThat(service.listInDepthSlides()).hasSize(24);
+		assertThat(service.listInDepthSlides().get(0).slideNumber()).isEqualTo(1);
+	}
+
+	@Test
+	void shouldDelegateInDepthDraftingAndRedraftingTest() {
+		// Given: a drafting service that answers both calls
+		InDepthDraftService draftService = mock(InDepthDraftService.class);
+		InDepthDraft draft = new InDepthDraft(List.of(), null);
+		when(draftService.draftInDepth("Pet Care", "Acme", "notes", "https://acme.com", List.of(2)))
+				.thenReturn(draft);
+		List<InDepthFieldValue> current = List.of(new InDepthFieldValue("trend_headline", "X"));
+		when(draftService.redraftSlide("Pet Care", "Acme", "notes", 2, "punchier", current)).thenReturn(draft);
+		CategoryAnalysisServiceImpl service = new CategoryAnalysisServiceImpl(
+				mock(CategoryAnalysisRepository.class), Mappers.getMapper(CategoryAnalysisMapper.class),
+				mock(StandardDraftService.class), mock(GoogleDeckService.class), draftService, mock(InDepthDeckService.class),
+				new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl());
+
+		// When-Then: the aggregate passes the brief through unchanged
+		assertThat(service.draftInDepth("Pet Care", "Acme", "notes", "https://acme.com", List.of(2)))
+				.isSameAs(draft);
+		assertThat(service.redraftInDepthSlide("Pet Care", "Acme", "notes", 2, "punchier", current))
+				.isSameAs(draft);
+	}
+
+	@Test
+	void shouldPublishTheInDepthDeckAndRecordItsTemplateKindTest() {
+		// Given: a reviewed In-Depth deck with two checked slides
+		CategoryAnalysisRepository repository = mock(CategoryAnalysisRepository.class);
+		InDepthDeckService deckService = mock(InDepthDeckService.class);
+		CreateInDepthDeckCommand command = new CreateInDepthDeckCommand("Pet Care", "Acme", List.of(1, 2),
+				List.of(new InDepthFieldValue("trend_headline", "PETS ARE PREMIUM")), "user_1");
+		String expectedTitle = "Category Analysis — Pet Care — Acme";
+		when(deckService.createInDepthDeck("user_1", expectedTitle, List.of(1, 2),
+				Map.of("trend_headline", "PETS ARE PREMIUM"), "https://app.example.com"))
+				.thenReturn("https://docs.google.com/presentation/d/deck_2/edit");
+		when(repository.save(org.mockito.ArgumentMatchers.<CategoryAnalysisEntity>any()))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		// When: the deck is created
+		CategoryAnalysisRecord record = new CategoryAnalysisServiceImpl(repository,
+				Mappers.getMapper(CategoryAnalysisMapper.class), mock(StandardDraftService.class),
+				mock(GoogleDeckService.class), mock(InDepthDraftService.class), deckService,
+				new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl())
+				.createInDepthDeck(command, "https://app.example.com");
+
+		// Then: the row records the In-Depth template and the deck URL
+		assertThat(record.title()).isEqualTo(expectedTitle);
+		assertThat(record.category()).isEqualTo("Pet Care");
+		assertThat(record.slidesUrl()).isEqualTo("https://docs.google.com/presentation/d/deck_2/edit");
+		assertThat(record.templateKind()).isEqualTo("IN_DEPTH");
+		assertThat(record.status()).isEqualTo("SUBMITTED");
+		assertThat(record.createdBy()).isEqualTo("user_1");
+		assertThat(record.createdAt()).isNotNull();
+	}
+
+	@Test
+	void shouldNotSaveARowWhenTheInDepthDeckCouldNotBePublishedTest() {
+		// Given: a Google flow that rejects the deck creation
+		CategoryAnalysisRepository repository = mock(CategoryAnalysisRepository.class);
+		InDepthDeckService deckService = mock(InDepthDeckService.class);
+		CreateInDepthDeckCommand command = new CreateInDepthDeckCommand("Pet Care", "Acme", List.of(2),
+				List.of(), "user_1");
+		when(deckService.createInDepthDeck("user_1", "Category Analysis — Pet Care — Acme", List.of(2),
+				Map.of(), "https://app.example.com"))
+				.thenThrow(new IllegalStateException("Google refused"));
+
+		// When-Then: nothing is persisted
+		assertThatThrownBy(() -> new CategoryAnalysisServiceImpl(repository,
+				Mappers.getMapper(CategoryAnalysisMapper.class), mock(StandardDraftService.class),
+				mock(GoogleDeckService.class), mock(InDepthDraftService.class), deckService,
+				new InDepthTemplateTokenRegistryImpl(), new CurrentTimeImpl())
+				.createInDepthDeck(command, "https://app.example.com"))
+				.isInstanceOf(IllegalStateException.class);
+		verifyNoInteractions(repository);
 	}
 }

@@ -2,6 +2,7 @@ package com.aidigital.strategyplanning.service.common.google;
 
 import com.aidigital.strategyplanning.external.clerk.ClerkOAuthClient;
 import com.aidigital.strategyplanning.external.clerk.model.ClerkOAuthGrant;
+import com.aidigital.strategyplanning.service.common.error.AppException;
 import com.aidigital.strategyplanning.service.common.google.impl.GoogleGrantServiceImpl;
 import com.aidigital.strategyplanning.service.common.google.models.GoogleOAuthScope;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -95,5 +97,52 @@ class GoogleGrantServiceImplTest {
 		assertThat(GoogleOAuthScope.DRIVE.getUri()).isEqualTo(DRIVE);
 		assertThat(GoogleOAuthScope.SLIDES.getUri()).isEqualTo(SLIDES);
 		assertThat(GoogleOAuthScope.DOCS.getUri()).isEqualTo(DOCS);
+	}
+
+	@Test
+	void shouldReturnTheTokenOfAGrantCarryingTheRequiredScopesTest() {
+		// Given: a grant covering Drive and Slides
+		ClerkOAuthClient clerkOAuthClient = mock(ClerkOAuthClient.class);
+		when(clerkOAuthClient.fetchGrant("sk_test", "user_1", "oauth_google"))
+				.thenReturn(new ClerkOAuthGrant("ya29.token", List.of(DRIVE, SLIDES)));
+
+		// When: a deck feature requires its token
+		String token = new GoogleGrantServiceImpl(clerkOAuthClient)
+				.requireAccessToken("sk_test", "user_1", Set.of(GoogleOAuthScope.DRIVE, GoogleOAuthScope.SLIDES));
+
+		// Then: the raw access token comes back
+		assertThat(token).isEqualTo("ya29.token");
+	}
+
+	@Test
+	void shouldRejectAUserWithoutAGoogleGrantOrTokenTest() {
+		// Given: no grant, then a grant with a blank token
+		ClerkOAuthClient clerkOAuthClient = mock(ClerkOAuthClient.class);
+		when(clerkOAuthClient.fetchGrant("sk_test", "user_1", "oauth_google")).thenReturn(null);
+		when(clerkOAuthClient.fetchGrant("sk_test", "user_2", "oauth_google"))
+				.thenReturn(new ClerkOAuthGrant(" ", List.of(DRIVE, SLIDES)));
+		GoogleGrantServiceImpl grantService = new GoogleGrantServiceImpl(clerkOAuthClient);
+
+		// When-Then: both are told to sign in with Google
+		assertThatThrownBy(() -> grantService.requireAccessToken("sk_test", "user_1", Set.of(GoogleOAuthScope.DRIVE)))
+				.isInstanceOf(AppException.class)
+				.hasMessageContaining("Not signed in with Google");
+		assertThatThrownBy(() -> grantService.requireAccessToken("sk_test", "user_2", Set.of(GoogleOAuthScope.DRIVE)))
+				.isInstanceOf(AppException.class)
+				.hasMessageContaining("Not signed in with Google");
+	}
+
+	@Test
+	void shouldRejectAGrantMissingARequiredScopeTest() {
+		// Given: a grant with Drive only
+		ClerkOAuthClient clerkOAuthClient = mock(ClerkOAuthClient.class);
+		when(clerkOAuthClient.fetchGrant("sk_test", "user_1", "oauth_google"))
+				.thenReturn(new ClerkOAuthGrant("ya29.token", List.of(DRIVE)));
+
+		// When-Then: the user is told to reconnect and allow the missing scope
+		assertThatThrownBy(() -> new GoogleGrantServiceImpl(clerkOAuthClient)
+				.requireAccessToken("sk_test", "user_1", Set.of(GoogleOAuthScope.DRIVE, GoogleOAuthScope.SLIDES)))
+				.isInstanceOf(AppException.class)
+				.hasMessageContaining("reconnect Google");
 	}
 }

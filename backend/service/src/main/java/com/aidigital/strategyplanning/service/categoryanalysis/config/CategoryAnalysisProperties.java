@@ -32,6 +32,12 @@ public class CategoryAnalysisProperties {
 	private String templatePresentationId = "164QKu8KTgpxYYGtX9lGXp-M_5IHXMm-oiGromJtfI3k";
 
 	/**
+	 * Google Slides presentation ID of the master In-Depth Category Analysis template (the
+	 * 24-slide layout library).
+	 */
+	private String inDepthTemplatePresentationId = "1BovwD1sUrLHk6eTjrvKmPLF6L_-M0mOo93YGP1UJ2Ac";
+
+	/**
 	 * Clerk secret key used to fetch the user's Google OAuth access token.
 	 */
 	private String clerkSecretKey = "";
@@ -131,6 +137,24 @@ public class CategoryAnalysisProperties {
 	 */
 	public void setTemplatePresentationId(String templatePresentationId) {
 		this.templatePresentationId = templatePresentationId;
+	}
+
+	/**
+	 * Returns the master In-Depth template presentation ID.
+	 *
+	 * @return Google Slides presentation ID of the In-Depth master template
+	 */
+	public String getInDepthTemplatePresentationId() {
+		return inDepthTemplatePresentationId;
+	}
+
+	/**
+	 * Sets the master In-Depth template presentation ID.
+	 *
+	 * @param inDepthTemplatePresentationId presentation ID to set
+	 */
+	public void setInDepthTemplatePresentationId(String inDepthTemplatePresentationId) {
+		this.inDepthTemplatePresentationId = inDepthTemplatePresentationId;
 	}
 
 	/**

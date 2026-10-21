@@ -10,8 +10,6 @@ import com.aidigital.strategyplanning.service.categoryanalysis.services.GoogleSl
 import com.aidigital.strategyplanning.service.categoryanalysis.services.SlidesPresentationInspector;
 import com.aidigital.strategyplanning.service.categoryanalysis.services.SlidesRequestFactory;
 import com.aidigital.strategyplanning.service.categoryanalysis.services.StandardDeckTemplateAdjuster;
-import com.aidigital.strategyplanning.service.common.error.AppException;
-import com.aidigital.strategyplanning.service.common.error.ErrorReason;
 import com.aidigital.strategyplanning.service.common.google.GoogleGrantService;
 import com.aidigital.strategyplanning.service.common.google.models.GoogleOAuthScope;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -37,6 +35,8 @@ import java.util.Set;
 public class GoogleDeckServiceImpl implements GoogleDeckService {
 
 	private static final String SOURCES_KEY_SUFFIX = "_sources";
+	private static final String PRESENTATION_URL_PREFIX = "https://docs.google.com/presentation/d/";
+	private static final String PRESENTATION_URL_SUFFIX = "/edit";
 	private static final Set<GoogleOAuthScope> REQUIRED_SCOPES =
 			Set.of(GoogleOAuthScope.DRIVE, GoogleOAuthScope.SLIDES);
 
@@ -64,17 +64,7 @@ public class GoogleDeckServiceImpl implements GoogleDeckService {
 	@Override
 	public String createDeck(String userId, String deckTitle, String category,
 	                         Map<String, String> tokenValues, String publicBaseUrl) {
-		ClerkOAuthGrant grant = googleGrantService.fetchGoogleGrant(
-				properties.getClerkSecretKey(), userId);
-		if (grant == null || !StringUtils.hasText(grant.token())) {
-			throw new AppException(ErrorReason.C003,
-					"Not signed in with Google — sign in with your Google account to create the deck");
-		}
-		if (!googleGrantService.hasScopes(grant.scopes(), REQUIRED_SCOPES)) {
-			throw new AppException(ErrorReason.C003,
-					"Google Drive & Slides access not granted — reconnect Google and allow Drive & Slides access");
-		}
-		String accessToken = grant.token();
+		String accessToken = requireAccessToken(userId);
 		String presentationId = slidesGateway.copyTemplate(accessToken, deckTitle);
 		JsonNode presentation = slidesGateway.getPresentation(accessToken, presentationId);
 		List<String> slideIds = inspector.extractSlideIds(presentation);
@@ -96,7 +86,30 @@ public class GoogleDeckServiceImpl implements GoogleDeckService {
 		} catch (RuntimeException e) {
 			log.warn("Skipping generated slide images for deck {}: {}", presentationId, e.getMessage());
 		}
-		return "https://docs.google.com/presentation/d/" + presentationId + "/edit";
+		return presentationUrl(presentationId);
+	}
+
+	/**
+	 * Resolves the user's Google access token, rejecting a user who is not signed in with Google
+	 * or whose grant lacks the Drive and Slides scopes.
+	 *
+	 * @param userId Clerk user ID
+	 * @return the user's Google OAuth access token
+	 * @throws com.aidigital.strategyplanning.service.common.error.AppException with C003 reason when Google
+	 * access is missing
+	 */
+	String requireAccessToken(String userId) {
+		return googleGrantService.requireAccessToken(properties.getClerkSecretKey(), userId, REQUIRED_SCOPES);
+	}
+
+	/**
+	 * Builds the edit URL of a presentation.
+	 *
+	 * @param presentationId Google Slides presentation id
+	 * @return URL opening the presentation in the editor
+	 */
+	String presentationUrl(String presentationId) {
+		return PRESENTATION_URL_PREFIX + presentationId + PRESENTATION_URL_SUFFIX;
 	}
 
 	/**

@@ -3,6 +3,7 @@ package com.aidigital.strategyplanning.service.mappers.categoryanalysis;
 import com.aidigital.strategyplanning.domain.categoryanalysis.entities.CategoryAnalysisEntity;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CategoryAnalysisRecord;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateCategoryAnalysisCommand;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateInDepthDeckCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateStandardDeckCommand;
 import com.aidigital.strategyplanning.service.common.mapping.ServiceMapperConfig;
 import org.mapstruct.Mapper;
@@ -68,5 +69,28 @@ public interface CategoryAnalysisMapper {
 	@Mapping(target = "recommendations", ignore = true)
 	@Mapping(target = "sourceFileNames", ignore = true)
 	CategoryAnalysisEntity toStandardDeckEntity(CreateStandardDeckCommand command, String title,
+			String slidesUrl, String templateKind, String status, LocalDateTime createdAt);
+
+	/**
+	 * Builds a new category analysis entity for an In-Depth deck created in Google Slides. As with
+	 * the Standard deck, the narrative columns stay empty because the reviewed values live in the
+	 * deck itself.
+	 *
+	 * @param command      validated deck command carrying the checked slides and reviewed values
+	 * @param title        deck title composed from the category and client
+	 * @param slidesUrl    URL of the created deck in the caller's Drive
+	 * @param templateKind template the deck was built from
+	 * @param status       lifecycle status to persist
+	 * @param createdAt    creation timestamp from the application clock
+	 * @return unsaved category analysis entity
+	 */
+	@Mapping(target = "id", ignore = true)
+	@Mapping(target = "marketOverview", ignore = true)
+	@Mapping(target = "keyPlayers", ignore = true)
+	@Mapping(target = "trends", ignore = true)
+	@Mapping(target = "opportunities", ignore = true)
+	@Mapping(target = "recommendations", ignore = true)
+	@Mapping(target = "sourceFileNames", ignore = true)
+	CategoryAnalysisEntity toInDepthDeckEntity(CreateInDepthDeckCommand command, String title,
 			String slidesUrl, String templateKind, String status, LocalDateTime createdAt);
 }

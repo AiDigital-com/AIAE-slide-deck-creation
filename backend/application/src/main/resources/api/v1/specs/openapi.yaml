@@ -764,6 +764,202 @@ paths:
               schema:
                 $ref: "#/components/schemas/AppApiExceptionResponseV1"
 
+  /api/v1/category-analyses/in-depth-slides:
+    get:
+      tags: [ CategoryAnalyses ]
+      operationId: listInDepthSlides
+      summary: List the selectable slides of the In-Depth Category Analysis master template
+      description: |
+        Returns the full 24-slide catalog of the In-Depth template's master deck for the
+        "check to include" preview. Several slides are alternate layouts of the same content
+        topic and each one is independently checkable; the catalog is static and needs no input.
+      security: [ { bearerAuth: [ ] } ]
+      responses:
+        "200":
+          description: Every selectable slide, in master-template order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InDepthSlideV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while listing the slide catalog.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/in-depth-drafts:
+    post:
+      tags: [ CategoryAnalyses ]
+      operationId: draftInDepthCategoryAnalysis
+      summary: AI-draft the checked fields of an In-Depth Category Analysis
+      description: |
+        Drafts every field belonging to the slides the user checked in the "check to include"
+        preview: the content is drafted first from the model's own knowledge, then its
+        statistics and sources are fact-checked against live web search, and the client's
+        website is reviewed, when it can be read, to confirm the category fits the client's
+        actual business. The result is meant to be reviewed and edited by the user before deck
+        creation. Stats and sources are AI-drafted and must be verified before client use.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Short brief plus the checked slide numbers. Category, client name, client website, and at least one selected slide are required.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InDepthDraftRequestV1"
+      responses:
+        "200":
+          description: Drafted field set for the checked slides, for review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InDepthDraftV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured or the drafting call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while drafting the analysis.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/in-depth-drafts/slide:
+    post:
+      tags: [ CategoryAnalyses ]
+      operationId: redraftInDepthCategorySlide
+      summary: AI-redraft the fields of a single slide of an In-Depth Category Analysis
+      description: |
+        Re-drafts only the fields of one checked slide of the In-Depth template, grounded in
+        live web search, using the original brief plus an optional per-slide guidance note. The
+        current values of the checked deck are supplied as context so the redraft stays
+        consistent with the slides the user is keeping. Only the returned slide's fields should
+        replace existing values; edits on other slides are preserved by the caller. Stats and
+        sources are AI-drafted and must be verified before client use.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Brief, slide number, optional per-slide note, and current checked-deck values for context.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedraftInDepthSlideRequestV1"
+      responses:
+        "200":
+          description: Redrafted field set for the requested slide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InDepthDraftV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured or the drafting call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while redrafting the slide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/in-depth-decks:
+    post:
+      tags: [ CategoryAnalyses ]
+      operationId: createInDepthCategoryDeck
+      summary: Create the In-Depth Category Analysis deck in the user's Google Slides
+      description: |
+        Copies the master In-Depth Category Analysis template into the authenticated user's own
+        Google Drive, deletes every slide not checked in the "check to include" preview, fills
+        the tokens of the remaining slides with the reviewed field values, redraws the slide-8
+        donut chart and resizes the slide-18 bars to their values, and returns the new
+        presentation's URL. Requires the user's Google account (via Clerk SSO) to grant Drive
+        and Slides access.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Reviewed field values and the checked slide set for deck creation.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInDepthDeckRequestV1"
+      responses:
+        "201":
+          description: Deck created in the user's Google Drive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryAnalysisV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: Google Drive/Slides access not granted or the Google API call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the deck.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
   /api/v1/rnd-requests:
     get:
       tags: [ RndRequests ]
@@ -1642,6 +1838,196 @@ components:
           description: Final reviewed values for every template field.
           items:
             $ref: "#/components/schemas/StandardFieldValueV1"
+
+    InDepthSlideV1:
+      type: object
+      additionalProperties: false
+      description: One selectable slide of the In-Depth template's master deck.
+      required: [ slideNumber, title, defaultChecked ]
+      properties:
+        slideNumber:
+          type: integer
+          format: int32
+          description: 1-based position in the master template (not renumbered after slides are excluded).
+        title:
+          type: string
+          description: Short human-readable label for the "check to include" checklist.
+        defaultChecked:
+          type: boolean
+          description: Whether this slide is checked by default when the picker first loads.
+
+    InDepthDraftRequestV1:
+      type: object
+      additionalProperties: false
+      description: Short brief plus checked slides used to AI-draft an In-Depth Category Analysis.
+      required: [ category, clientName, clientWebsite, selectedSlides ]
+      properties:
+        category:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Market category or industry being analysed (e.g. "Regional Travel", "Western Boots").
+        clientName:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Client the analysis is prepared for (e.g. "Alberta Boot").
+        clientWebsite:
+          type: string
+          maxLength: 2048
+          minLength: 1
+          description: >-
+            Client's website URL (e.g. "https://albertaboot.com"). The builder reviews the
+            site, when it can be read, to understand the client's business focus and confirm
+            the deck aligns with it.
+        guidanceNotes:
+          type: string
+          maxLength: 10000
+          nullable: true
+          description: Optional focus areas, angles, or constraints to steer the draft.
+        selectedSlides:
+          type: array
+          minItems: 1
+          maxItems: 24
+          description: Slide numbers checked in the "check to include" preview (see the in-depth slide catalog).
+          items:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 24
+            description: 1-based slide number of the master template.
+
+    InDepthDraftFieldV1:
+      type: object
+      additionalProperties: false
+      description: One drafted template field, written to every checked slide that shares it.
+      required: [ key, label, slideNumbers, value ]
+      properties:
+        key:
+          type: string
+          description: Stable template token key (e.g. "trend_headline").
+        label:
+          type: string
+          description: Human-readable label shown in the review UI.
+        slideNumbers:
+          type: array
+          description: Every slide in the master template this field belongs to (more than one entry when shared across layout variants of the same topic).
+          items:
+            type: integer
+            format: int32
+            description: 1-based slide number of the master template.
+        value:
+          type: string
+          description: Drafted text value; editable by the user before deck creation.
+
+    InDepthDraftV1:
+      type: object
+      additionalProperties: false
+      description: AI-drafted field set for the In-Depth Category Analysis template, scoped to the checked slides.
+      required: [ fields ]
+      properties:
+        fields:
+          type: array
+          description: Drafted fields for the checked slides, ordered by the template's token registry.
+          items:
+            $ref: "#/components/schemas/InDepthDraftFieldV1"
+        alignment:
+          nullable: true
+          description: >-
+            How closely the draft matched the requested category and client. Absent for
+            single-slide redrafts and for selections with no draftable content, where no website
+            review is performed.
+          allOf:
+            - $ref: "#/components/schemas/DraftAlignmentV1"
+
+    RedraftInDepthSlideRequestV1:
+      type: object
+      additionalProperties: false
+      description: Brief plus current deck context used to AI-redraft a single slide of an In-Depth Category Analysis.
+      required: [ category, clientName, slideNumber, currentFields ]
+      properties:
+        category:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Market category or industry being analysed.
+        clientName:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Client the analysis is prepared for.
+        guidanceNotes:
+          type: string
+          maxLength: 10000
+          nullable: true
+          description: Original brief focus areas or constraints, may be null.
+        slideNumber:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 24
+          description: Slide to redraft (matches a slideNumber from the in-depth slide catalog).
+        slideNote:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Optional guidance for this redraft (e.g. "make it more data-driven", "focus on Gen Z").
+        currentFields:
+          type: array
+          maxItems: 400
+          description: Current values for every field of the checked slides, supplied as context so the redraft stays consistent with slides being kept.
+          items:
+            $ref: "#/components/schemas/InDepthFieldValueV1"
+
+    InDepthFieldValueV1:
+      type: object
+      additionalProperties: false
+      description: A reviewed field value keyed by its In-Depth template token.
+      required: [ key, value ]
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Stable template token key.
+        value:
+          type: string
+          maxLength: 20000
+          description: Final reviewed text value.
+
+    CreateInDepthDeckRequestV1:
+      type: object
+      additionalProperties: false
+      description: Reviewed field values and checked slide set used to create the deck in the user's Google Slides.
+      required: [ category, clientName, selectedSlides, fields ]
+      properties:
+        category:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Market category or industry being analysed.
+        clientName:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Client the analysis is prepared for.
+        selectedSlides:
+          type: array
+          minItems: 1
+          maxItems: 24
+          description: Slide numbers checked in the "check to include" preview; every other slide is deleted from the copied template.
+          items:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 24
+            description: 1-based slide number of the master template.
+        fields:
+          type: array
+          maxItems: 400
+          description: Final reviewed values for every field of the checked slides.
+          items:
+            $ref: "#/components/schemas/InDepthFieldValueV1"
 
     RndDecisionV1:
       type: string

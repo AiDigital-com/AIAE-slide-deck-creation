@@ -2,7 +2,11 @@ package com.aidigital.strategyplanning.service.categoryanalysis.services;
 
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CategoryAnalysisRecord;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateCategoryAnalysisCommand;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateInDepthDeckCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateStandardDeckCommand;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthDraft;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthFieldValue;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthSlideSpec;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardConnections;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardDraft;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardFieldValue;
@@ -96,4 +100,59 @@ public interface CategoryAnalysisService {
 	 * missing or deck creation fails
 	 */
 	CategoryAnalysisRecord createStandardDeck(CreateStandardDeckCommand command, String publicBaseUrl);
+
+	/**
+	 * Lists every selectable slide of the In-Depth master template for the "check to include"
+	 * preview, in deck order.
+	 *
+	 * @return the static slide catalog
+	 */
+	List<InDepthSlideSpec> listInDepthSlides();
+
+	/**
+	 * AI-drafts every field of the checked In-Depth slides, fact-checked against live web search
+	 * and reviewed against the client's website for business-focus alignment.
+	 *
+	 * @param category       market category or industry being analysed
+	 * @param clientName     client the analysis is prepared for
+	 * @param guidanceNotes  optional focus areas or constraints, may be null
+	 * @param clientWebsite  client's website URL, reviewed for business-focus alignment
+	 * @param selectedSlides slide numbers checked in the "check to include" preview
+	 * @return drafted field set scoped to the checked slides, with alignment confirmation
+	 * @throws com.aidigital.strategyplanning.service.common.error.AppException with C003 reason when the AI engine is
+	 * not configured, no slides are selected, or drafting fails
+	 */
+	InDepthDraft draftInDepth(String category, String clientName, String guidanceNotes,
+	                          String clientWebsite, List<Integer> selectedSlides);
+
+	/**
+	 * AI-redrafts only the fields of a single In-Depth slide, grounded in live web search, using
+	 * the whole checked deck's current values as context.
+	 *
+	 * @param category      market category or industry being analysed
+	 * @param clientName    client the analysis is prepared for
+	 * @param guidanceNotes original brief focus areas or constraints, may be null
+	 * @param slideNumber   slide to redraft (1-24)
+	 * @param slideNote     optional guidance for this redraft, may be null
+	 * @param currentFields current values for every field of the checked slides, used as context
+	 * @return drafted field set for the requested slide
+	 * @throws com.aidigital.strategyplanning.service.common.error.AppException with C003 reason when the AI engine is
+	 * not configured or drafting fails
+	 */
+	InDepthDraft redraftInDepthSlide(String category, String clientName, String guidanceNotes,
+	                                 int slideNumber, String slideNote,
+	                                 List<InDepthFieldValue> currentFields);
+
+	/**
+	 * Creates the In-Depth deck in the user's Google Slides from the checked slides and reviewed
+	 * field values, then persists the resulting analysis record with its Slides URL.
+	 *
+	 * @param command       reviewed field values, checked slide set, and creator
+	 * @param publicBaseUrl externally reachable base URL of this backend (scheme + host), used to
+	 *                      serve the drawn donut chart image so Google Slides can fetch it
+	 * @return the persisted category analysis record including the Slides URL
+	 * @throws com.aidigital.strategyplanning.service.common.error.AppException with C003 reason when Google access is
+	 * missing or deck creation fails
+	 */
+	CategoryAnalysisRecord createInDepthDeck(CreateInDepthDeckCommand command, String publicBaseUrl);
 }

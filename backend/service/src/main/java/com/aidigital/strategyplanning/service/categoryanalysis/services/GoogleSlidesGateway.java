@@ -22,6 +22,16 @@ public interface GoogleSlidesGateway {
 	String copyTemplate(String accessToken, String deckTitle);
 
 	/**
+	 * Copies any master presentation into the user's Drive.
+	 *
+	 * @param accessToken            user's Google OAuth access token
+	 * @param templatePresentationId presentation to copy
+	 * @param deckTitle              file name for the copy
+	 * @return presentation id of the copy
+	 */
+	String copyPresentation(String accessToken, String templatePresentationId, String deckTitle);
+
+	/**
 	 * Reads a presentation.
 	 *
 	 * @param accessToken    user's Google OAuth access token
