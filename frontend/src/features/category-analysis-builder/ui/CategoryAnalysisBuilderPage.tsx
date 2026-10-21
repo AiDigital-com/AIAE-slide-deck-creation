@@ -27,6 +27,7 @@ import type {
     Step,
 } from "../model/types";
 import { mergeSlideRedraft } from "./redraftMerge";
+import { selectStandardAnalyses } from "../model/recentAnalyses";
 import "./category-analysis-builder.css";
 
 /**
@@ -117,6 +118,7 @@ export function CategoryAnalysisBuilderPage() {
             if (error) throw new Error("Failed to load recent analyses");
             return data;
         },
+        select: selectStandardAnalyses,
     });
 
     const draftMutation = useMutation({

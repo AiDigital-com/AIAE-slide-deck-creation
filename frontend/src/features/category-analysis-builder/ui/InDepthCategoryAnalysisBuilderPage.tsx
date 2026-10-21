@@ -31,6 +31,7 @@ import type {
     InDepthStep,
 } from "../model/types";
 import { mergeInDepthSlideRedraft } from "./inDepthRedraftMerge";
+import { selectInDepthAnalyses } from "../model/recentAnalyses";
 import "./category-analysis-builder.css";
 
 /**
@@ -141,6 +142,7 @@ export function InDepthCategoryAnalysisBuilderPage() {
             if (error) throw new Error("Failed to load recent analyses");
             return data;
         },
+        select: selectInDepthAnalyses,
     });
 
     // Seed the checklist from each slide's default once, when the catalog first loads.
