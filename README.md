@@ -150,17 +150,19 @@ tools, with their defaults from `backend/application/src/main/resources/applicat
 |---|---|---|
 | `CATEGORY_ANALYSIS_IN_DEPTH_TEMPLATE_ID` | `1BovwD1sUrLHk6eTjrvKmPLF6L_-M0mOo93YGP1UJ2Ac` | Master In-Depth Category Analysis Slides template (24-slide layout library), copied per deck. |
 | `CASE_STUDY_ONE_PAGE_TEMPLATE_ID` | `1S2ZPNRah7OBlPQVVdssFOCah5uc_oKfrtPjYTg38SW0` | Tokenized One-Page Case Study Slides template, copied per deck. |
-| `CASE_STUDY_PUBLIC_ASSET_BASE_URL` | blank (the address the request arrived on) | Public base URL Google Slides fetches `/case-study-icons/**` from when swapping the one-page icons. |
+| `CASE_STUDY_PUBLIC_ASSET_BASE_URL` | blank (the address the request arrived on) | Public base URL Google Slides fetches `/case-study-icons/**` from when swapping the One-Page Case Study icons. It affects only that icon swap; the Standard/In-Depth slide images and the donut always use the address the request arrived on. |
 | `ONE_PAGER_TEMPLATE_ID` | `1Ghth9tTCL685cco2c3Dm2w7Avfi9sBlWYdyFSv25jW4` | One Page Generator master ("Extended - One Pager Templates"); exported as PPTX, never copied or edited. |
 | `APP_EXTERNAL_GOOGLE_TRANSFER_RESPONSE_TIMEOUT` | `120s` | Response ceiling for Drive PPTX export and upload, which move whole files. |
-| `APP_EXTERNAL_GOOGLE_TRANSIENT_RETRY_ATTEMPTS` | `3` | Retries on Google's transient 5xx answers for those transfers. |
+| `APP_EXTERNAL_GOOGLE_TRANSIENT_RETRY_ATTEMPTS` | `3` | Total attempts for the Drive PPTX export on Google's transient 5xx answers. The upload is never resent, because a repeated multipart `POST` could create the file twice. |
 
-Image swaps need Google to reach this app: the In-Depth donut is served from
-`/public/slide-images/{token}` and the one-page case-study icons from
-`/case-study-icons/**`, and Google Slides fetches both by public URL. From
-`localhost` those fetches fail and the master's placeholder images stay in the
-deck, unless `CASE_STUDY_PUBLIC_ASSET_BASE_URL` points at a deployed instance
-that serves the same assets.
+Image swaps need Google to reach this app. The Standard and In-Depth slide
+images and the In-Depth donut are served from `/public/slide-images/{token}` at
+the address the request arrived on, so the app must be reachable by Google at
+that URL; from `localhost` the fetch fails and the master's placeholder stays in
+the deck. `CASE_STUDY_PUBLIC_ASSET_BASE_URL` does not change that: it only
+overrides the base URL of the One-Page Case Study icons
+(`/case-study-icons/**`), so a localhost run can point those at a deployed
+instance that serves the same assets.
 
 ## MVP limitations
 
@@ -169,8 +171,9 @@ that serves the same assets.
   switch to a company sink when cross-service aggregation is required.
 - Google master template IDs are configuration, not managed content — a
   template edited in Drive changes every future deck with no versioning.
-- Donut and icon swaps only happen when Google can fetch the image from this
-  app's public URL; on `localhost` they are skipped unless
+- Image swaps only happen when Google can fetch the image from this app's
+  public URL; on `localhost` the Standard/In-Depth images and the donut are
+  skipped, and the One-Page Case Study icons are skipped unless
   `CASE_STUDY_PUBLIC_ASSET_BASE_URL` is set (see "Required env vars").
 - Deck and doc generation runs synchronously inside the request; a slow AI or
   Google call holds the HTTP connection open. There is no job queue or retry.

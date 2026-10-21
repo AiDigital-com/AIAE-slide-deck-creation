@@ -211,7 +211,7 @@ and `OnePageFitRevisionPolicyImpl` ask the drafter to shorten what overflows,
 and the user sees the fit result before creating the deck. Fifteen tagged icons
 are swapped from `/case-study-icons/{name}.png`, which Google fetches from the
 app's public URL (`app.case-study.public-asset-base-url` overrides the request
-host for localhost runs).
+host for these icons only, for localhost runs).
 
 The entry point is
 `backend/service/src/main/java/com/aidigital/strategyplanning/service/casestudy/services/impl/GoogleOnePageCaseStudyDeckServiceImpl.java`;
@@ -373,12 +373,12 @@ never invalidates.
 |---|---|---|---|
 | Clerk | User authentication | OIDC/JWT | Fail closed when token validation or required auth configuration fails |
 | Clerk Backend API | Exchange the session for the user's Google OAuth token | HTTPS with `CLERK_SECRET_KEY` | Request fails; deck generation surfaces the error to the user |
-| OpenAI chat completions | Draft case studies (three-page and one-page), Standard category analyses, one-pagers, RFP outlines; multimodal input (`image_url` data URLs for uploaded screenshots) is plain request JSON | HTTPS with `OPENAI_API_KEY`, model `gpt-4o` | Blank key means "AI not connected" in the UI; no retry; a completion cut off at the token limit (`finish_reason: length`) is the typed `INCOMPLETE` failure |
+| OpenAI chat completions | Draft case studies (three-page and one-page), Standard category analyses, one-pagers, RFP outlines; multimodal input (`image_url` data URLs for uploaded screenshots) is plain request JSON | HTTPS with `OPENAI_API_KEY`, model `gpt-6.1-sol` (default, overridden by `OPENAI_MODEL`) | Blank key means "AI not connected" in the UI; no retry; a completion cut off at the token limit (`finish_reason: length`) is the typed `INCOMPLETE` failure; requests carry no sampling parameters (`temperature`) because the configured model is a reasoning model, and chat bodies bound output with `max_completion_tokens` (reasoning tokens count against it) |
 | OpenAI Responses API (`/responses`) | In-depth category analysis fact-checking with the built-in `web_search` tool (`OpenAiResponsesClient`) | HTTPS with `OPENAI_API_KEY` | No retry; `status: incomplete` is the typed `INCOMPLETE` failure; the concatenated `output_text` plus the raw `output` items (search calls, citations) are returned |
 | OpenAI image generation | Slide imagery, transparent cutout PNGs | HTTPS with `OPENAI_API_KEY`, model `gpt-image-1` | Deck generation proceeds without imagery |
 | Google Slides / Docs / Drive | Copy a master template into the user's Drive and populate it | HTTPS with the end user's Google OAuth token | Request fails; no partial-deck cleanup |
-| Google Slides image fetch (inbound) | Google fetches the In-Depth donut PNG from `/public/slide-images/{token}` and the one-page case-study icons from `/case-study-icons/**` by public URL | Unauthenticated public paths; the base URL is the request host or `CASE_STUDY_PUBLIC_ASSET_BASE_URL` | An unreachable host (for example localhost) leaves the master's placeholder image in place; the deck is still created |
-| Google Drive export / upload | Export a Slides master as PPTX (`files/{id}/export`) and upload an assembled PPTX back as a Slides file (`upload/drive/v3/files?uploadType=multipart`) for the One Page Generator | HTTPS with the end user's Google OAuth token; own pools `drive-export` / `drive-upload` with `app.external.google.transfer-response-timeout` (120s) | Resent on a 5xx up to `app.external.google.transient-retry-attempts` (3) with linear backoff; 4xx and transport failures are final |
+| Google Slides image fetch (inbound) | Google fetches the Standard/In-Depth slide images and the In-Depth donut PNG from `/public/slide-images/{token}` and the One-Page Case Study icons from `/case-study-icons/**` by public URL | Unauthenticated public paths; the slide-image base URL is always the request host, and only the case-study icons can be overridden with `CASE_STUDY_PUBLIC_ASSET_BASE_URL` | An unreachable host (for example localhost) leaves the master's placeholder image in place; the deck is still created |
+| Google Drive export / upload | Export a Slides master as PPTX (`files/{id}/export`) and upload an assembled PPTX back as a Slides file (`upload/drive/v3/files?uploadType=multipart`) for the One Page Generator | HTTPS with the end user's Google OAuth token; own pools `drive-export` / `drive-upload` with `app.external.google.transfer-response-timeout` (120s) | The export GET is resent on a 5xx up to `app.external.google.transient-retry-attempts` (3) with linear backoff; the upload is a non-idempotent `POST /files` (Drive may commit and still answer 5xx), so it is sent exactly once on a client with automatic retries disabled and a 5xx surfaces as `HTTP_STATUS`; 4xx and transport failures are final |
 | Slite, Asana | Optional capability search for R&D triage | HTTPS with per-provider token | Unset by default; triage works without them |
 | PostgreSQL | Application persistence | JDBC/TLS in managed environments | Transaction rollback; bounded pool (5 connections on Replit) and query timeouts |
 
@@ -396,7 +396,8 @@ Two behaviours worth knowing before relying on this in production:
 
 - Apache HttpClient 5 retries `429` and `503` once by default. For a `POST` to a
   billed provider that means the request can genuinely be sent twice. Pinned by
-  `OpenAiClientTransportTest`; decide explicitly whether to keep it.
+  `OpenAiClientTransportTest`; decide explicitly whether to keep it. The Google Drive
+  upload pool is the exception: `createSingleAttemptClient` disables it.
 - Every `exchange` call passes `close = true`. Spring closes the response only
   in that case, and each handler reads the whole body before returning. With
   `false` the pooled connection is never released and the pool starves after
@@ -407,7 +408,7 @@ inoperative until a template is created. The other master templates
 (`CATEGORY_ANALYSIS_TEMPLATE_ID`, `CATEGORY_ANALYSIS_IN_DEPTH_TEMPLATE_ID`,
 `CASE_STUDY_TEMPLATE_PRESENTATION_ID`, `CASE_STUDY_ONE_PAGE_TEMPLATE_ID`,
 `ONE_PAGER_TEMPLATE_ID`) default to the canonical file ids in
-`application.yml`; the Drive transfer ceiling and retry count are
+`application.yml`; the Drive transfer ceiling and export retry count are
 `APP_EXTERNAL_GOOGLE_TRANSFER_RESPONSE_TIMEOUT` and
 `APP_EXTERNAL_GOOGLE_TRANSIENT_RETRY_ATTEMPTS`.
 
@@ -451,9 +452,9 @@ is engineering's first operational task and is not a defect in the application.
 | Package `groupId` and repository name disagree | Same history as above | Cosmetic only; renaming would rewrite every Java file |
 | Authorization is flat; isolation comes from `createdBy` ownership, not roles | Five internal tools shared by one company-domain team; a role model would add a table and a policy layer nothing needs | Adding a genuine admin capability means designing roles from scratch — there is no dormant role model to switch on |
 | One-pagers are assembled from the master's exported PPTX with Apache POI and uploaded as a new Slides file | The Slides API cannot clone shapes across slides, and the master is a component library rather than a finished deck | Shape ids in `OnePagerLayout` must be re-derived if the master is restructured |
-| One-pagers are stored as category-analysis rows with template kind `ONE_PAGER`, not in a table of their own | The list only needs title, category, link and owner, which the existing table already holds; a new aggregate would add a migration and an entity service for one list | `GET /api/v1/category-analyses` returns every kind and each tool filters by `templateKind`; a one-pager row has empty narrative columns |
+| One-pagers are stored as category-analysis rows with template kind `ONE_PAGER`, not in a table of their own | The list only needs title, category, link and owner, which the existing table already holds; a new aggregate would add a migration and an entity service for one list | `GET /api/v1/category-analyses` returns every kind; the One Page Generator keeps `ONE_PAGER` rows, the Standard builder keeps `STANDARD` plus rows with no kind (legacy manual submissions), the In-Depth builder keeps `IN_DEPTH` rows, and no other page shows `ONE_PAGER` rows; a one-pager row has empty narrative columns |
 | The In-Depth deck service is separate from the Standard one | The two masters differ in slide count, token set, chart handling and drafting engine (Responses with `web_search` vs. chat completions); one service with two modes would branch on nearly every step | Both record into the same table with different template kinds; shared Google plumbing lives in `GoogleSlidesGateway` |
-| Master templates that need images rely on Google reaching the app's public URL | Google Slides fetches images server-side; there is no upload path for a replace-image request | From localhost the donut and case-study icons stay as the master's placeholders unless `CASE_STUDY_PUBLIC_ASSET_BASE_URL` points at a deployed instance |
+| Master templates that need images rely on Google reaching the app's public URL | Google Slides fetches images server-side; there is no upload path for a replace-image request | From localhost the donut and Standard/In-Depth images stay as the master's placeholders (they always use the request-derived URL); only the One-Page Case Study icons can be redirected, with `CASE_STUDY_PUBLIC_ASSET_BASE_URL` pointing at a deployed instance |
 | The cache-invalidation mechanism ships complete but with an empty registry | No read path has been profiled; caching an unmeasured workload trades correctness risk for an unproven win | Caching is off for every workflow. Enabling it is a registry entry plus a `publishUpdateEvent` call in the same transaction |
 
 The risks carried into the AIAE migration are closed. Each row records what

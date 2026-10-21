@@ -187,7 +187,8 @@ app:
       keep-alive-duration: 60s
       idle-eviction-duration: 30s
     # Google Drive file export/upload (PPTX <-> Slides) move whole files and get their own
-    # response ceiling and a bounded retry on Google's transient 5xx pages.
+    # response ceiling; the export GET also gets a bounded retry on Google's transient 5xx pages.
+    # The non-idempotent upload POST is never resent (a retry could create the file twice).
     google:
       transfer-response-timeout: ${APP_EXTERNAL_GOOGLE_TRANSFER_RESPONSE_TIMEOUT:120s}
       transient-retry-attempts: ${APP_EXTERNAL_GOOGLE_TRANSIENT_RETRY_ATTEMPTS:3}
