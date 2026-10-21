@@ -13,6 +13,7 @@ import com.aidigital.strategyplanning.service.onepager.services.OnePagerModuleCo
 import com.aidigital.strategyplanning.service.onepager.services.OnePagerPageSizer;
 import com.aidigital.strategyplanning.service.onepager.services.OnePagerShapeEditor;
 import com.aidigital.strategyplanning.service.onepager.templates.OnePagerLayout;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ import java.util.Map;
  * the shell, fills its header, clones every drafted module in stacking order, sizes the page, and
  * drops the master's other slides so exactly one finished page remains.
  */
+@Slf4j
 @Service
 public class OnePagerAssemblyServiceImpl implements OnePagerAssemblyService {
 
@@ -36,7 +38,8 @@ public class OnePagerAssemblyServiceImpl implements OnePagerAssemblyService {
 	public static final List<OnePagerModuleKey> DEFAULT_MODULE_ORDER = List.of(
 			OnePagerModuleKey.TRACKER, OnePagerModuleKey.SOLUTIONS, OnePagerModuleKey.KPIS);
 
-	private static final String ASSEMBLY_FAILURE = "Could not assemble the one-pager: ";
+	private static final String ASSEMBLY_FAILURE =
+			"Could not assemble the one-pager. Check that the master template is unchanged and try again.";
 
 	private final OnePagerShapeEditor shapes;
 	private final OnePagerHeaderComposer headerComposer;
@@ -81,8 +84,10 @@ public class OnePagerAssemblyServiceImpl implements OnePagerAssemblyService {
 			return out.toByteArray();
 		} catch (IOException | RuntimeException e) {
 			// POI reports a non-OOXML master and a missing shape as runtime failures; both mean the
-			// master is not the template this feature was built against, which the user must hear.
-			throw new AppException(ErrorReason.C003, e, ASSEMBLY_FAILURE + e.getMessage());
+			// master is not the template this feature was built against. The detail stays in the log;
+			// the user gets a fixed message that cannot leak library internals.
+			log.error("One-pager assembly failed for shell {}: {}", shell, e.getMessage(), e);
+			throw new AppException(ErrorReason.C003, e, ASSEMBLY_FAILURE);
 		}
 	}
 

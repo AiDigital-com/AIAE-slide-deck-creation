@@ -15,8 +15,9 @@ import java.time.Duration;
  * <p>Ordinary Drive, Slides, and Docs calls are small JSON exchanges and share the module-wide
  * response timeout. Exporting a presentation as a PPTX and uploading one back for conversion
  * move whole files and are far slower, so they get their own ceiling here rather than relaxing
- * the global one. Google's upload and export endpoints also occasionally answer a transient
- * {@code 502}/{@code 503} HTML page; the retry settings bound how often such a call is resent.
+ * the global one. Google's export endpoint also occasionally answers a transient {@code 502}/{@code 503}
+ * HTML page; the retry settings bound how often that export GET is resent. The upload is a
+ * non-idempotent POST and is never resent.
  *
  * <p>All fields bind from the {@code app.external.google.*} namespace:
  * <pre>

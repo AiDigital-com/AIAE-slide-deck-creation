@@ -81,8 +81,9 @@ public interface GoogleWorkspaceClient {
 	 * @param sourceMimeType type of the uploaded bytes, for example
 	 *                       {@code application/vnd.openxmlformats-officedocument.presentationml.presentation}
 	 * @return the created file as Drive returns it, always carrying an {@code id}
-	 * @throws GoogleApiException when the call fails, the API answers non-2xx after the transient
-	 *                            retries, or the answer names no file id
+	 * @throws GoogleApiException when the call fails, the API answers non-2xx (the upload is sent
+	 *                            once and never resent, because it is not idempotent), or the
+	 *                            answer names no file id
 	 */
 	JsonNode uploadDriveFile(String accessToken, String name, String targetMimeType, byte[] content,
 			String sourceMimeType);

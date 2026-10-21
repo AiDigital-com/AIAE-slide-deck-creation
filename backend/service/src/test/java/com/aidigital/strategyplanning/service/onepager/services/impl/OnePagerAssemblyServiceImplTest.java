@@ -128,10 +128,12 @@ class OnePagerAssemblyServiceImplTest {
 		// Given: garbage instead of the master
 		OnePagerAssemblyServiceImpl assembly = OnePagerFixtures.assembly();
 
-		// When-Then: the failure is the feature's application error
+		// When-Then: the failure is the feature's application error with a fixed, user-safe message
+		// (the POI detail goes to the log, not the response)
 		assertThatThrownBy(() -> assembly.assemble(new byte[]{1, 2, 3}, OnePagerShell.TOP_BAR,
 				OnePagerFixtures.headerOnly()))
 				.isInstanceOf(AppException.class)
-				.hasMessageContaining("Could not assemble the one-pager");
+				.hasMessageEndingWith("External call failed: Could not assemble the one-pager. "
+						+ "Check that the master template is unchanged and try again.");
 	}
 }

@@ -10,8 +10,10 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import java.nio.charset.StandardCharsets;
@@ -41,6 +43,20 @@ class GoogleWorkspaceClientTransferTransportTest {
 	private static final Duration TRANSFER_TIMEOUT = Duration.ofSeconds(120);
 
 	/**
+	 * Builds a REST client that, like the production upload pool, never resends a request on its
+	 * own.
+	 *
+	 * @param server stub HTTP server
+	 * @return client with Apache HttpClient's automatic retries disabled
+	 */
+	private RestClient singleAttemptClient(MockWebServer server) {
+		return RestClient.builder()
+				.requestFactory(new HttpComponentsClientHttpRequestFactory(
+						HttpClients.custom().disableAutomaticRetries().build()))
+				.baseUrl(server.url("/").toString()).build();
+	}
+
+	/**
 	 * Builds a client whose export and upload pools point at the stub server, with a retry pause
 	 * short enough for a unit test.
 	 *
@@ -53,9 +69,9 @@ class GoogleWorkspaceClientTransferTransportTest {
 		RestClient restClient = RestClient.builder().baseUrl(server.url("/").toString()).build();
 		when(factory.createClient(eq("drive-export"), eq("https://www.googleapis.com/drive/v3"),
 				eq(TRANSFER_TIMEOUT))).thenReturn(restClient);
-		when(factory.createClient(eq("drive-upload"),
+		when(factory.createSingleAttemptClient(eq("drive-upload"),
 				eq("https://www.googleapis.com/upload/drive/v3"), eq(TRANSFER_TIMEOUT)))
-				.thenReturn(restClient);
+				.thenReturn(singleAttemptClient(server));
 		GoogleWorkspaceClientProperties properties = new GoogleWorkspaceClientProperties();
 		properties.setTransientRetryAttempts(attempts);
 		properties.setTransientRetryBackoff(Duration.ofMillis(1));
@@ -213,26 +229,45 @@ class GoogleWorkspaceClientTransferTransportTest {
 	}
 
 	@Test
-	void shouldResendAnUploadThatHitsATransientServerErrorTest() throws Exception {
-		// Given: Google's generic error page once, then the created file
+	void shouldNotResendAnUploadThatHitsATransientServerErrorTest() throws Exception {
+		// Given: Google's generic error page on the upload, then a success that must never be
+		// requested, because the first POST may already have created the file
 		try (MockWebServer server = new MockWebServer()) {
 			server.start();
-			server.enqueue(new MockResponse().setResponseCode(503).setBody("<html>error</html>"));
 			server.enqueue(new MockResponse().setResponseCode(503).setBody("<html>error</html>"));
 			server.enqueue(new MockResponse().setResponseCode(200).setBody("{\"id\":\"slides_1\"}"));
 			byte[] pptx = "PK".getBytes(StandardCharsets.UTF_8);
 
-			// When: the upload is attempted. Apache HttpClient 5 retries a 503 once on its own,
-			// so two 503s are consumed before this client's own retry sends the one that succeeds
-			JsonNode created = clientFor(server, 3)
-					.uploadDriveFile(TOKEN, "One Pager", SLIDES_MIME, pptx, PPTX_MIME);
+			// When: the upload is attempted with several attempts configured
+			GoogleWorkspaceClientImpl client = clientFor(server, 3);
 
-			// Then: the caller only sees the success, and every attempt carried the same body
-			assertThat(created.path("id").asText()).isEqualTo("slides_1");
-			assertThat(server.getRequestCount()).isEqualTo(3);
-			String first = server.takeRequest().getBody().readUtf8();
-			server.takeRequest();
-			assertThat(server.takeRequest().getBody().readUtf8()).isEqualTo(first);
+			// Then: it fails once with the typed status failure and the server saw one upload
+			assertThatThrownBy(() -> client.uploadDriveFile(TOKEN, "One Pager", SLIDES_MIME, pptx, PPTX_MIME))
+					.isInstanceOfSatisfying(GoogleApiException.class, failure -> {
+						assertThat(failure.getFailure()).isEqualTo(GoogleApiFailure.HTTP_STATUS);
+						assertThat(failure.getStatusCode()).isEqualTo(503);
+					});
+			assertThat(server.getRequestCount()).isEqualTo(1);
+		}
+	}
+
+	@Test
+	void shouldNotResendAnUploadThatHitsABadGatewayTest() throws Exception {
+		// Given: a 502 on the upload followed by a success that must not be consumed
+		try (MockWebServer server = new MockWebServer()) {
+			server.start();
+			server.enqueue(new MockResponse().setResponseCode(502).setBody("<html>error</html>"));
+			server.enqueue(new MockResponse().setResponseCode(200).setBody("{\"id\":\"slides_1\"}"));
+			byte[] pptx = "PK".getBytes(StandardCharsets.UTF_8);
+
+			// When-Then: one request, one typed failure
+			GoogleWorkspaceClientImpl client = clientFor(server, 3);
+			assertThatThrownBy(() -> client.uploadDriveFile(TOKEN, "One Pager", SLIDES_MIME, pptx, PPTX_MIME))
+					.isInstanceOfSatisfying(GoogleApiException.class, failure -> {
+						assertThat(failure.getFailure()).isEqualTo(GoogleApiFailure.HTTP_STATUS);
+						assertThat(failure.getStatusCode()).isEqualTo(502);
+					});
+			assertThat(server.getRequestCount()).isEqualTo(1);
 		}
 	}
 
@@ -291,9 +326,9 @@ class GoogleWorkspaceClientTransferTransportTest {
 			when(factory.createClient(eq("drive-export"), eq("https://www.googleapis.com/drive/v3"),
 					eq(Duration.ofSeconds(7)))).thenReturn(
 					RestClient.builder().baseUrl(server.url("/").toString()).build());
-			when(factory.createClient(eq("drive-upload"),
+			when(factory.createSingleAttemptClient(eq("drive-upload"),
 					eq("https://www.googleapis.com/upload/drive/v3"), eq(Duration.ofSeconds(7))))
-					.thenReturn(RestClient.builder().baseUrl(server.url("/").toString()).build());
+					.thenReturn(singleAttemptClient(server));
 			GoogleWorkspaceClientProperties properties = new GoogleWorkspaceClientProperties();
 			properties.setTransferResponseTimeout(Duration.ofSeconds(7));
 			GoogleWorkspaceClientImpl client =
@@ -308,7 +343,7 @@ class GoogleWorkspaceClientTransferTransportTest {
 			// neither shares the ordinary Drive pool's shorter ceiling or its metrics series
 			org.mockito.Mockito.verify(factory).createClient("drive-export",
 					"https://www.googleapis.com/drive/v3", Duration.ofSeconds(7));
-			org.mockito.Mockito.verify(factory).createClient("drive-upload",
+			org.mockito.Mockito.verify(factory).createSingleAttemptClient("drive-upload",
 					"https://www.googleapis.com/upload/drive/v3", Duration.ofSeconds(7));
 			org.mockito.Mockito.verifyNoMoreInteractions(factory);
 		}

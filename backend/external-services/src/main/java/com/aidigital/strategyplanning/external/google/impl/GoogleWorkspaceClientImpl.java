@@ -111,8 +111,7 @@ public class GoogleWorkspaceClientImpl implements GoogleWorkspaceClient {
 				.put("mimeType", targetMimeType)
 				.toString();
 		byte[] body = multipartBody(boundary, metadata, sourceMimeType, content);
-		JsonNode created = parse(withTransientRetry(UPLOAD_ACTION,
-				() -> uploadBytes(accessToken, boundary, body)));
+		JsonNode created = parse(uploadBytes(accessToken, boundary, body));
 		if (created.path("id").asText("").isBlank()) {
 			throw new GoogleApiException(GoogleApiFailure.TRANSPORT, 200, created.toString(),
 					UPLOAD_ACTION + " returned no file id");
@@ -150,7 +149,7 @@ public class GoogleWorkspaceClientImpl implements GoogleWorkspaceClient {
 	 */
 	String uploadBytes(String accessToken, String boundary, byte[] body) {
 		try {
-			return client(DRIVE_UPLOAD_API_BASE, DRIVE_UPLOAD_CLIENT, properties.getTransferResponseTimeout())
+			return uploadClient()
 					.post()
 					.uri(UPLOAD_PATH)
 					.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
@@ -189,11 +188,14 @@ public class GoogleWorkspaceClientImpl implements GoogleWorkspaceClient {
 	}
 
 	/**
-	 * Runs a file transfer call, resending it after a pause while it keeps failing with a 5xx.
+	 * Runs an idempotent file transfer call, resending it after a pause while it keeps failing
+	 * with a 5xx.
 	 *
-	 * <p>Google's export and upload endpoints occasionally answer a transient {@code 502}/{@code
-	 * 503} page. The request bodies here are fixed byte arrays, so resending is safe. Any other
-	 * failure — a 4xx, a transport error, an interruption — propagates immediately.
+	 * <p>Google's export endpoint occasionally answers a transient {@code 502}/{@code 503} page,
+	 * and a repeated GET is harmless. Only the export uses this: the multipart upload is a
+	 * non-idempotent {@code POST /files}, and Drive may commit the file and still answer 5xx, so
+	 * resending it could create a duplicate. Any other failure — a 4xx, a transport error, an
+	 * interruption — propagates immediately.
 	 *
 	 * @param action short description of the call, for the retry log line
 	 * @param call   the call to run
@@ -354,6 +356,18 @@ public class GoogleWorkspaceClientImpl implements GoogleWorkspaceClient {
 		}
 		return new GoogleApiException(GoogleApiFailure.TRANSPORT,
 				cause.getMessage(), cause);
+	}
+
+	/**
+	 * Returns the upload pool's client, creating it on first use. Its automatic retries are
+	 * disabled so a {@code 503} is never silently resent for the non-idempotent upload.
+	 *
+	 * @return pooled REST client that sends each request once
+	 */
+	RestClient uploadClient() {
+		return clientsByName.computeIfAbsent(DRIVE_UPLOAD_CLIENT,
+				key -> restClientFactory.createSingleAttemptClient(key, DRIVE_UPLOAD_API_BASE,
+						properties.getTransferResponseTimeout()));
 	}
 
 	/**
