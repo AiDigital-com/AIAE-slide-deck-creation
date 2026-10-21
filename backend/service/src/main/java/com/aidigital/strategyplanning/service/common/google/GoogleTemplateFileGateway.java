@@ -1,5 +1,6 @@
 package com.aidigital.strategyplanning.service.common.google;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 /**
@@ -32,6 +33,17 @@ public interface GoogleTemplateFileGateway {
 	 * @param action         human-readable action used in error messages
 	 */
 	void fillPresentation(String accessToken, String presentationId, ArrayNode requests, String action);
+
+	/**
+	 * Reads a copied presentation, for features that need to locate tagged elements before
+	 * updating them.
+	 *
+	 * @param accessToken    user's Google OAuth access token
+	 * @param presentationId presentation to read
+	 * @param action         human-readable action used in error messages
+	 * @return the presentation as the Slides API returns it
+	 */
+	JsonNode readPresentation(String accessToken, String presentationId, String action);
 
 	/**
 	 * Applies replaceAllText requests to a copied document.

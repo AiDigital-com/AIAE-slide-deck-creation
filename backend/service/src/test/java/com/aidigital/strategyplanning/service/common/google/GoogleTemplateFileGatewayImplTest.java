@@ -190,4 +190,35 @@ class GoogleTemplateFileGatewayImplTest {
 						.isEqualTo("External call failed: Could not fill the RFP outline doc"
 								+ " (Google returned HTTP 429)"));
 	}
+
+	@Test
+	void shouldReadACopiedPresentationBackTest() {
+		// Given: Slides answers with the copied deck
+		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
+		ObjectMapper objectMapper = new ObjectMapper();
+		when(workspaceClient.getPresentation(TOKEN, "copy_1"))
+				.thenReturn(objectMapper.createObjectNode().put("presentationId", "copy_1"));
+
+		// When: the presentation is read
+		var presentation = new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient)
+				.readPresentation(TOKEN, "copy_1", "read the one-page case study deck");
+
+		// Then: the caller gets the Slides resource to inspect
+		assertThat(presentation.path("presentationId").asText()).isEqualTo("copy_1");
+	}
+
+	@Test
+	void shouldNameTheReadActionOnAFailureTest() {
+		// Given: Slides refuses the read
+		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
+		ObjectMapper objectMapper = new ObjectMapper();
+		when(workspaceClient.getPresentation(TOKEN, "copy_1"))
+				.thenThrow(new GoogleApiException(GoogleApiFailure.HTTP_STATUS, 404, "{}", "HTTP 404"));
+
+		// When-Then: the message says what the user was doing
+		assertThatThrownBy(() -> new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient)
+				.readPresentation(TOKEN, "copy_1", "read the one-page case study deck"))
+				.isInstanceOf(AppException.class)
+				.hasMessageContaining("Could not read the one-page case study deck (Google returned HTTP 404)");
+	}
 }

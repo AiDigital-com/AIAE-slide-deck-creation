@@ -4,15 +4,32 @@ import com.aidigital.strategyplanning.api.v1.model.CaseStudyDraftV1;
 import com.aidigital.strategyplanning.api.v1.model.CaseStudySummaryV1;
 import com.aidigital.strategyplanning.api.v1.model.CaseStudyV1;
 import com.aidigital.strategyplanning.api.v1.model.CreateCaseStudyRequestV1;
+import com.aidigital.strategyplanning.api.v1.model.CreateOnePageCaseStudyRequestV1;
 import com.aidigital.strategyplanning.api.v1.model.GenerationStatusV1;
+import com.aidigital.strategyplanning.api.v1.model.OnePageCaseStudyDraftV1;
+import com.aidigital.strategyplanning.api.v1.model.OnePageCaseStudyFieldV1;
+import com.aidigital.strategyplanning.api.v1.model.OnePageCaseStudyFieldValueV1;
+import com.aidigital.strategyplanning.api.v1.model.OnePageCaseStudyIconChoiceV1;
+import com.aidigital.strategyplanning.api.v1.model.OnePageFieldSourceV1;
+import com.aidigital.strategyplanning.api.v1.model.OnePageFitV1;
 import com.aidigital.strategyplanning.mappers.casestudy.CaseStudyApiMapper;
 import com.aidigital.strategyplanning.service.casestudy.models.CaseStudyDraft;
 import com.aidigital.strategyplanning.service.casestudy.models.CaseStudyRecord;
 import com.aidigital.strategyplanning.service.casestudy.models.CreateCaseStudyCommand;
+import com.aidigital.strategyplanning.service.casestudy.models.CreateOnePageCaseStudyCommand;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageCaseStudyDraft;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageCaseStudyField;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageFieldValue;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageIconChoice;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageCaseStudyIcon;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageFieldSource;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageFit;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageIconOption;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -196,5 +213,134 @@ class CaseStudyApiMapperTest {
 		assertThat(command.testimonial()).isEqualTo("Best decision we made.");
 		assertThat(command.sourceFileName()).isEqualTo("acme-report.pdf");
 		assertThat(command.createdBy()).isEqualTo("user_1");
+	}
+
+	@Test
+	void shouldMapAOnePageDraftWithItsEnumsOntoTheResponseTest() {
+		// Given: a measured draft with one field, one icon, and the library
+		CaseStudyApiMapper mapper = Mappers.getMapper(CaseStudyApiMapper.class);
+		OnePageCaseStudyDraft draft = new OnePageCaseStudyDraft(
+				List.of(new OnePageCaseStudyField("challenge", "The challenge", "Challenge & campaign", "CPA rose.",
+						OnePageFieldSource.FILES, 600, 5, 6, 2, OnePageFit.SHORT, "Add detail")),
+				List.of(new OnePageCaseStudyIcon("plan_icon", "Game plan icon", null)),
+				List.of(new OnePageIconOption("compass", "Compass", "/case-study-icons/compass.png")),
+				"brief.pdf");
+
+		// When: it is converted for the API
+		OnePageCaseStudyDraftV1 response = mapper.toOnePageDraftV1(draft);
+
+		// Then: every field, enum, and nullable comes through
+		assertThat(response.getFields()).hasSize(1);
+		assertThat(response.getFields().get(0).getKey()).isEqualTo("challenge");
+		assertThat(response.getFields().get(0).getSection()).isEqualTo("Challenge & campaign");
+		assertThat(response.getFields().get(0).getSource()).isEqualTo(OnePageFieldSourceV1.FILES);
+		assertThat(response.getFields().get(0).getFit()).isEqualTo(OnePageFitV1.SHORT);
+		assertThat(response.getFields().get(0).getMinLines()).isEqualTo(5);
+		assertThat(response.getFields().get(0).getMaxLines()).isEqualTo(6);
+		assertThat(response.getFields().get(0).getLines()).isEqualTo(2);
+		assertThat(response.getFields().get(0).getMaxChars()).isEqualTo(600);
+		assertThat(response.getFields().get(0).getNote()).isEqualTo("Add detail");
+		assertThat(response.getIcons().get(0).getSlot()).isEqualTo("plan_icon");
+		assertThat(response.getIcons().get(0).getIcon()).isNull();
+		assertThat(response.getIconLibrary().get(0).getImageUrl()).isEqualTo("/case-study-icons/compass.png");
+		assertThat(response.getSourceFileNames()).isEqualTo("brief.pdf");
+	}
+
+	@Test
+	void shouldMapAOnePageCreateRequestOntoTheCommandTest() {
+		// Given: a reviewed request with a field, a chosen icon, and a kept template icon
+		CaseStudyApiMapper mapper = Mappers.getMapper(CaseStudyApiMapper.class);
+		CreateOnePageCaseStudyRequestV1 request = new CreateOnePageCaseStudyRequestV1(
+				List.of(new OnePageCaseStudyFieldValueV1("title_line_1", "Scaling")),
+				List.of(new OnePageCaseStudyIconChoiceV1("plan_icon").icon("compass"),
+						new OnePageCaseStudyIconChoiceV1("stat_1_icon")))
+				.sourceFileNames("brief.pdf");
+
+		// When: it is converted to the service command
+		CreateOnePageCaseStudyCommand command = mapper.toOnePageCommand(request, "user_1");
+
+		// Then: values, icons (including the null), the file names, and the caller all carry over
+		assertThat(command.fields()).hasSize(1);
+		assertThat(command.fields().get(0).key()).isEqualTo("title_line_1");
+		assertThat(command.fields().get(0).value()).isEqualTo("Scaling");
+		assertThat(command.icons()).hasSize(2);
+		assertThat(command.icons().get(0).icon()).isEqualTo("compass");
+		assertThat(command.icons().get(1).icon()).isNull();
+		assertThat(command.sourceFileNames()).isEqualTo("brief.pdf");
+		assertThat(command.createdBy()).isEqualTo("user_1");
+	}
+
+	@Test
+	void shouldMapEveryOnePageEnumValueAndTolerateNullElementsTest() {
+		// Given: one field per source and fit value, plus null entries in every one-page list
+		CaseStudyApiMapper mapper = Mappers.getMapper(CaseStudyApiMapper.class);
+		List<OnePageCaseStudyField> fields = Arrays.asList(
+				new OnePageCaseStudyField("a", "A", "S", "x", OnePageFieldSource.FILES, 10, 0, 0, 0,
+						OnePageFit.FITS, null),
+				new OnePageCaseStudyField("b", "B", "S", "y", OnePageFieldSource.WRITTEN, 10, 1, 2, 3,
+						OnePageFit.OVER, null),
+				new OnePageCaseStudyField("c", "C", "S", "", null, 10, 0, 0, 0, OnePageFit.EMPTY, null),
+				new OnePageCaseStudyField("d", "D", "S", "z", OnePageFieldSource.FILES, 10, 1, 1, 0, null, null),
+				null);
+		OnePageCaseStudyDraft draft = new OnePageCaseStudyDraft(fields,
+				Arrays.asList(new OnePageCaseStudyIcon("plan_icon", "Plan", "compass"), null),
+				Arrays.asList(new OnePageIconOption("compass", "Compass", "/i.png"), null), "brief.pdf");
+
+		// When: the draft and the field list are converted
+		OnePageCaseStudyDraftV1 response = mapper.toOnePageDraftV1(draft);
+		List<OnePageCaseStudyFieldV1> fieldsV1 = mapper.toOnePageFieldV1List(fields);
+
+		// Then: each enum maps by name, absent enums stay null, and null elements pass through as null
+		assertThat(fieldsV1).hasSize(5);
+		assertThat(fieldsV1.get(0).getSource()).isEqualTo(OnePageFieldSourceV1.FILES);
+		assertThat(fieldsV1.get(0).getFit()).isEqualTo(OnePageFitV1.FITS);
+		assertThat(fieldsV1.get(1).getSource()).isEqualTo(OnePageFieldSourceV1.WRITTEN);
+		assertThat(fieldsV1.get(1).getFit()).isEqualTo(OnePageFitV1.OVER);
+		assertThat(fieldsV1.get(2).getSource()).isNull();
+		assertThat(fieldsV1.get(2).getFit()).isEqualTo(OnePageFitV1.EMPTY);
+		assertThat(fieldsV1.get(3).getFit()).isNull();
+		assertThat(fieldsV1.get(4)).isNull();
+		assertThat(response.getIcons()).hasSize(2);
+		assertThat(response.getIcons().get(1)).isNull();
+		assertThat(response.getIconLibrary()).hasSize(2);
+		assertThat(response.getIconLibrary().get(1)).isNull();
+		assertThat(mapper.toOnePageFieldV1List(List.of(new OnePageCaseStudyField("e", "E", "S", "w",
+				OnePageFieldSource.FILES, 10, 1, 1, 1, OnePageFit.SHORT, "note"))).get(0).getFit())
+				.isEqualTo(OnePageFitV1.SHORT);
+	}
+
+	@Test
+	void shouldReturnNullForAbsentOnePageInputsTest() {
+		// Given: absent inputs at every one-page boundary
+		CaseStudyApiMapper mapper = Mappers.getMapper(CaseStudyApiMapper.class);
+
+		// When-Then: MapStruct's null contract holds, so a missing body never becomes an NPE
+		assertThat(mapper.toOnePageDraftV1(null)).isNull();
+		assertThat(mapper.toOnePageFieldV1List(null)).isNull();
+		assertThat(mapper.toOnePageFieldValues(null)).isNull();
+		assertThat(mapper.toOnePageCommand(null, null)).isNull();
+		assertThat(mapper.toOnePageDraftV1(new OnePageCaseStudyDraft(null, null, null, "x")).getFields()).isNull();
+	}
+
+	@Test
+	void shouldMapAOnePageCommandWithOnlyTheCallerAndWithNullListEntriesTest() {
+		// Given: a request-less call and a request with null entries in both lists
+		CaseStudyApiMapper mapper = Mappers.getMapper(CaseStudyApiMapper.class);
+		CreateOnePageCaseStudyRequestV1 request = new CreateOnePageCaseStudyRequestV1(
+				Arrays.asList(new OnePageCaseStudyFieldValueV1("k", "v"), null),
+				Arrays.asList(new OnePageCaseStudyIconChoiceV1("s"), null));
+
+		// When: both are converted
+		CreateOnePageCaseStudyCommand callerOnly = mapper.toOnePageCommand(null, "user_1");
+		CreateOnePageCaseStudyCommand command = mapper.toOnePageCommand(request, "user_1");
+		List<OnePageFieldValue> values = mapper.toOnePageFieldValues(request.getFields());
+
+		// Then: the caller survives a missing request; null entries pass through as null
+		assertThat(callerOnly.createdBy()).isEqualTo("user_1");
+		assertThat(callerOnly.fields()).isNull();
+		assertThat(command.fields()).containsExactly(new OnePageFieldValue("k", "v"), null);
+		assertThat(command.icons()).containsExactly(new OnePageIconChoice("s", null), null);
+		assertThat(command.sourceFileNames()).isNull();
+		assertThat(values).hasSize(2);
 	}
 }

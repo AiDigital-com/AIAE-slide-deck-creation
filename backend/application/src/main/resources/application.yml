@@ -209,6 +209,11 @@ app:
     template-url: ${CASE_STUDY_TEMPLATE_URL:https://docs.google.com/presentation/d/1ET3mz7ZVvbn4EDSHnpOcuCw_s5Kd3g717VPq5pnADXw/edit}
     # Master template copied into the user's Drive for each generated case study deck.
     template-presentation-id: ${CASE_STUDY_TEMPLATE_PRESENTATION_ID:1ET3mz7ZVvbn4EDSHnpOcuCw_s5Kd3g717VPq5pnADXw}
+    # Tokenized One-Page Case Study template (app-owned copy of the design master) copied per deck.
+    one-page-template-presentation-id: ${CASE_STUDY_ONE_PAGE_TEMPLATE_ID:1S2ZPNRah7OBlPQVVdssFOCah5uc_oKfrtPjYTg38SW0}
+    # Public base URL Google Slides fetches /case-study-icons/** from when swapping template icons.
+    # Blank = the address the request arrived on; set to the deployed URL when running on localhost.
+    public-asset-base-url: ${CASE_STUDY_PUBLIC_ASSET_BASE_URL:}
     # Clerk secret key — used to fetch the user's Google OAuth token for Drive/Slides.
     clerk-secret-key: ${CLERK_SECRET_KEY:}
     # AI auto-draft from uploaded source documents — blank key means "AI not connected".

@@ -215,6 +215,174 @@ paths:
               schema:
                 $ref: "#/components/schemas/AppApiExceptionResponseV1"
 
+  /api/v1/case-studies/one-page-drafts:
+    post:
+      tags: [ CaseStudies ]
+      operationId: draftOnePageCaseStudy
+      summary: AI-draft the One-Page Case Study from uploaded source documents and screenshots
+      description: |
+        Accepts up to 10 source files (PDF, Word, PowerPoint, Excel, CSV, text/Markdown, or
+        PNG/JPEG/WebP screenshots) and drafts every field of the One-Page Case Study template.
+        Facts (figures, dates, channels, results) come only from the documents; short titles and
+        labels may be AI-written for flow. Fields the documents do not support come back empty.
+        Every value is measured in its real text box with the template's fonts and revised until
+        it fits; values the material cannot stretch to fill a box are flagged for the reviewer.
+        Also proposes an icon from the template's icon library for each icon slot. Each screenshot
+        must be 10 MB or smaller.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Source documents to draft from. Between 1 and 10 files.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              description: Multipart payload carrying the uploaded source documents.
+              required: [ files ]
+              properties:
+                files:
+                  type: array
+                  description: Uploaded source files (PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, CSV, TXT, MD, PNG, JPG, JPEG, or WEBP). Maximum 10 files; each image at most 10 MB.
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                    format: binary
+                    description: One uploaded source document or screenshot.
+      responses:
+        "200":
+          description: Drafted One-Page Case Study fields and icon picks for review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnePageCaseStudyDraftV1"
+        "400":
+          description: Request validation failed (no files, more than 10 files, an image over 10 MB, or an unsupported/unreadable file).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured or the drafting call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while drafting the case study.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/case-studies/one-page-fit:
+    post:
+      tags: [ CaseStudies ]
+      operationId: measureOnePageCaseStudy
+      summary: Measure One-Page Case Study values against their boxes on the slide
+      description: |
+        Wraps each value in its real box on the One-Page Case Study template, using the template's
+        fonts, and reports how many lines it takes and whether it fills the box without overflowing.
+        Used by the review form to re-check edited values.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Reviewed values to measure, keyed by template field.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeasureOnePageCaseStudyRequestV1"
+      responses:
+        "200":
+          description: Every field with its measured fit.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Every template field in slide order.
+                items:
+                  $ref: "#/components/schemas/OnePageCaseStudyFieldV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while measuring the fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/case-studies/one-page-decks:
+    post:
+      tags: [ CaseStudies ]
+      operationId: createOnePageCaseStudy
+      summary: Create the One-Page Case Study deck in Google Slides
+      description: |
+        Copies the One-Page Case Study template into the user's Google Drive, fills every token
+        with the reviewed values (blank values clear their box), swaps each tagged icon for the
+        chosen library icon, and records the case study. The template's hero photo is left as a
+        placeholder for the user to replace.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Reviewed field values and icon choices to build the deck from.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOnePageCaseStudyRequestV1"
+      responses:
+        "201":
+          description: Deck created; the case study record includes the Google Slides URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseStudyV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: Google is not connected or a Google API call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the deck.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
   /api/v1/case-studies/{id}:
     get:
       tags: [ CaseStudies ]
@@ -1214,6 +1382,191 @@ components:
           type: string
           format: date-time
           description: UTC timestamp when the case study was created.
+
+    OnePageFieldSourceV1:
+      type: string
+      enum: [ FILES, WRITTEN ]
+      description: Where a One-Page field's content may come from — FILES when the value must come from the uploaded documents, WRITTEN when the AI may phrase it (titles, labels).
+
+    OnePageFitV1:
+      type: string
+      enum: [ FITS, SHORT, OVER, EMPTY ]
+      description: How a value sits in its box on the slide — FITS fills the box without overflowing, SHORT leaves part of it empty, OVER runs past it, EMPTY leaves it blank on purpose.
+
+    OnePageCaseStudyFieldV1:
+      type: object
+      additionalProperties: false
+      description: One drafted text field of the One-Page Case Study template, with how it fits its box on the slide.
+      required: [ key, label, section, value, source, maxChars, minLines, maxLines, lines, fit ]
+      properties:
+        key:
+          type: string
+          description: Template token key, e.g. tactic_1_title.
+        label:
+          type: string
+          description: Human-readable field label.
+        section:
+          type: string
+          description: Template section the field belongs to, used to group the review form.
+        value:
+          type: string
+          description: Drafted value; empty when the documents do not support one.
+        source:
+          description: Where the value may come from — the uploaded files or AI wording.
+          allOf:
+            - $ref: "#/components/schemas/OnePageFieldSourceV1"
+        maxChars:
+          type: integer
+          format: int32
+          description: Hard character ceiling (a safety net; the measured line limit is what matters).
+        minLines:
+          type: integer
+          format: int32
+          description: Lines that fill the field's box on the slide; 0 when the field has no fill target.
+        maxLines:
+          type: integer
+          format: int32
+          description: Lines that fit the field's box before it runs into the next element; 0 when the field is limited by characters rather than lines.
+        lines:
+          type: integer
+          format: int32
+          description: Lines the value wraps to in its box, measured with the template's fonts; 0 when empty or not measured in lines.
+        fit:
+          description: How the value sits in its box; a field limited by characters rather than lines is FITS or EMPTY.
+          allOf:
+            - $ref: "#/components/schemas/OnePageFitV1"
+        note:
+          type: string
+          nullable: true
+          description: Explanation for the reviewer when the source files could not fill the box.
+
+    OnePageCaseStudyIconV1:
+      type: object
+      additionalProperties: false
+      description: One icon slot on the template and the library icon chosen for it.
+      required: [ slot, label ]
+      properties:
+        slot:
+          type: string
+          description: Icon slot key, matching the icon's alt text without braces, e.g. tactic_1_icon.
+        label:
+          type: string
+          description: Human-readable slot label.
+        icon:
+          type: string
+          nullable: true
+          description: Chosen library icon name; null keeps the template's original icon.
+
+    OnePageCaseStudyIconOptionV1:
+      type: object
+      additionalProperties: false
+      description: One icon in the template's icon library.
+      required: [ name, description, imageUrl ]
+      properties:
+        name:
+          type: string
+          description: Library icon name.
+        description:
+          type: string
+          description: What the icon shows.
+        imageUrl:
+          type: string
+          description: App-relative URL of the icon image.
+
+    OnePageCaseStudyDraftV1:
+      type: object
+      additionalProperties: false
+      description: AI-drafted One-Page Case Study fields and icon picks, for review before deck creation.
+      required: [ fields, icons, iconLibrary, sourceFileNames ]
+      properties:
+        fields:
+          type: array
+          description: Every template text field in slide order.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyFieldV1"
+        icons:
+          type: array
+          description: Every icon slot with its proposed library icon.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyIconV1"
+        iconLibrary:
+          type: array
+          description: All icons the user can pick from.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyIconOptionV1"
+        sourceFileNames:
+          type: string
+          description: Comma-separated names of the uploaded source files the draft was produced from.
+
+    OnePageCaseStudyFieldValueV1:
+      type: object
+      additionalProperties: false
+      description: One reviewed One-Page field value keyed by its template token.
+      required: [ key, value ]
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Template token key.
+        value:
+          type: string
+          maxLength: 2000
+          description: Reviewed value; empty clears the field's box.
+
+    OnePageCaseStudyIconChoiceV1:
+      type: object
+      additionalProperties: false
+      description: One reviewed icon choice for a template icon slot.
+      required: [ slot ]
+      properties:
+        slot:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Icon slot key.
+        icon:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: Library icon name; null keeps the template's original icon.
+
+    MeasureOnePageCaseStudyRequestV1:
+      type: object
+      additionalProperties: false
+      description: Values to measure against their boxes on the slide.
+      required: [ fields ]
+      properties:
+        fields:
+          type: array
+          maxItems: 100
+          description: Values keyed by template field; fields left out are measured as blank.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyFieldValueV1"
+
+    CreateOnePageCaseStudyRequestV1:
+      type: object
+      additionalProperties: false
+      description: Reviewed One-Page Case Study content to build the deck from.
+      required: [ fields, icons ]
+      properties:
+        fields:
+          type: array
+          maxItems: 100
+          description: Reviewed values for the template's text fields.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyFieldValueV1"
+        icons:
+          type: array
+          maxItems: 50
+          description: Reviewed icon choices.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyIconChoiceV1"
+        sourceFileNames:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Comma-separated names of the source files the content came from.
 
     CreateCaseStudyRequestV1:
       type: object

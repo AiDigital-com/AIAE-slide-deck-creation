@@ -5,11 +5,16 @@ import com.aidigital.strategyplanning.api.v1.model.CaseStudyDraftV1;
 import com.aidigital.strategyplanning.api.v1.model.CaseStudySummaryV1;
 import com.aidigital.strategyplanning.api.v1.model.CaseStudyV1;
 import com.aidigital.strategyplanning.api.v1.model.CreateCaseStudyRequestV1;
+import com.aidigital.strategyplanning.api.v1.model.CreateOnePageCaseStudyRequestV1;
+import com.aidigital.strategyplanning.api.v1.model.MeasureOnePageCaseStudyRequestV1;
+import com.aidigital.strategyplanning.api.v1.model.OnePageCaseStudyDraftV1;
+import com.aidigital.strategyplanning.api.v1.model.OnePageCaseStudyFieldV1;
 import com.aidigital.strategyplanning.mappers.casestudy.CaseStudyApiMapper;
 import com.aidigital.strategyplanning.security.AppUserFactory;
 import com.aidigital.strategyplanning.service.casestudy.config.CaseStudyProperties;
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyDraftService;
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyService;
+import com.aidigital.strategyplanning.service.casestudy.services.OnePageCaseStudyDraftService;
 import com.aidigital.strategyplanning.service.common.files.SourceUploads;
 import com.aidigital.strategyplanning.uploads.MultipartSourceUploadReader;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.List;
 
@@ -31,6 +37,7 @@ public class CaseStudiesController implements CaseStudiesApi {
 
 	private final CaseStudyService caseStudyService;
 	private final CaseStudyDraftService caseStudyDraftService;
+	private final OnePageCaseStudyDraftService onePageCaseStudyDraftService;
 	private final MultipartSourceUploadReader multipartSourceUploadReader;
 	private final CaseStudyProperties caseStudyProperties;
 	private final CaseStudyApiMapper caseStudyApiMapper;
@@ -58,6 +65,33 @@ public class CaseStudiesController implements CaseStudiesApi {
 				multipartSourceUploadReader.read(files, caseStudyProperties.getMaxSourceFiles());
 		return ResponseEntity.ok(caseStudyApiMapper.toDraftV1(
 				caseStudyDraftService.draft(uploads.documents(), uploads.images())));
+	}
+
+	@Override
+	public ResponseEntity<OnePageCaseStudyDraftV1> draftOnePageCaseStudy(List<MultipartFile> files) {
+		appUserFactory.from(SecurityContextHolder.getContext().getAuthentication());
+		SourceUploads uploads =
+				multipartSourceUploadReader.read(files, caseStudyProperties.getMaxSourceFiles());
+		return ResponseEntity.ok(caseStudyApiMapper.toOnePageDraftV1(
+				onePageCaseStudyDraftService.draft(uploads.documents(), uploads.images())));
+	}
+
+	@Override
+	public ResponseEntity<List<OnePageCaseStudyFieldV1>> measureOnePageCaseStudy(
+			MeasureOnePageCaseStudyRequestV1 request) {
+		appUserFactory.from(SecurityContextHolder.getContext().getAuthentication());
+		return ResponseEntity.ok(caseStudyApiMapper.toOnePageFieldV1List(
+				onePageCaseStudyDraftService.measureFields(
+						caseStudyApiMapper.toOnePageFieldValues(request.getFields()))));
+	}
+
+	@Override
+	public ResponseEntity<CaseStudyV1> createOnePageCaseStudy(CreateOnePageCaseStudyRequestV1 request) {
+		var user = appUserFactory.from(SecurityContextHolder.getContext().getAuthentication());
+		var command = caseStudyApiMapper.toOnePageCommand(request, user.userId());
+		String requestBaseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+		var record = caseStudyService.createOnePage(command, requestBaseUrl);
+		return ResponseEntity.status(HttpStatus.CREATED).body(caseStudyApiMapper.toV1(record));
 	}
 
 	@Override

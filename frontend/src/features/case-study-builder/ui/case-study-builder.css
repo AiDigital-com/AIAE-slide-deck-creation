@@ -447,3 +447,54 @@
     font-size: var(--text-pill);
     color: var(--text-error);
 }
+
+/* Template picker */
+.csb__template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+    gap: var(--space-5);
+    max-width: 56.25rem;
+}
+
+.csb__template-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    text-align: left;
+    background: var(--surface-default);
+    border: var(--border-hairline) solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: var(--shadow-card);
+}
+
+.csb__template-card:hover {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 0.1875rem var(--focus-ring);
+}
+
+.csb__template-title {
+    font-family: var(--font-display);
+    font-size: var(--text-section);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-display);
+    color: var(--text-heading);
+}
+
+.csb__template-desc {
+    font-size: var(--text-body);
+    color: var(--text-muted);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.csb__template-cta {
+    margin-top: var(--space-2);
+    font-size: var(--text-body);
+    font-weight: 600;
+    color: var(--accent-primary);
+}

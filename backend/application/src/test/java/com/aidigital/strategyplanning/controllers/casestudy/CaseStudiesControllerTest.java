@@ -13,9 +13,19 @@ import com.aidigital.strategyplanning.service.common.time.CurrentTimeImpl;
 import com.aidigital.strategyplanning.service.casestudy.models.CaseStudyDraft;
 import com.aidigital.strategyplanning.service.casestudy.models.CaseStudyRecord;
 import com.aidigital.strategyplanning.service.casestudy.models.CreateCaseStudyCommand;
+import com.aidigital.strategyplanning.service.casestudy.models.CreateOnePageCaseStudyCommand;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageCaseStudyDraft;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageCaseStudyField;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageCaseStudyIcon;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageFieldSource;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageFieldValue;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageFit;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageIconChoice;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageIconOption;
 import com.aidigital.strategyplanning.service.casestudy.config.CaseStudyProperties;
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyDraftService;
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyService;
+import com.aidigital.strategyplanning.service.casestudy.services.OnePageCaseStudyDraftService;
 import com.aidigital.strategyplanning.service.common.files.SourceDocument;
 import com.aidigital.strategyplanning.service.common.files.SourceFileTextService;
 import com.aidigital.strategyplanning.service.common.files.SourceImage;
@@ -80,6 +90,9 @@ class CaseStudiesControllerTest {
 
 	private static final String CASE_STUDIES_URL = "/api/v1/case-studies";
 	private static final String DRAFTS_URL = "/api/v1/case-studies/drafts";
+	private static final String ONE_PAGE_DRAFTS_URL = "/api/v1/case-studies/one-page-drafts";
+	private static final String ONE_PAGE_FIT_URL = "/api/v1/case-studies/one-page-fit";
+	private static final String ONE_PAGE_DECKS_URL = "/api/v1/case-studies/one-page-decks";
 
 	@Autowired
 	private MockMvc mvc;
@@ -92,6 +105,9 @@ class CaseStudiesControllerTest {
 
 	@MockitoBean
 	private CaseStudyDraftService caseStudyDraftService;
+
+	@MockitoBean
+	private OnePageCaseStudyDraftService onePageCaseStudyDraftService;
 
 	@MockitoBean
 	private SourceFileTextService sourceFileTextService;
@@ -274,5 +290,126 @@ class CaseStudiesControllerTest {
 				.andExpect(jsonPath("$.id").value(7))
 				.andExpect(jsonPath("$.industry").value("Retail"));
 		verify(caseStudyService).getById(7L, "user_123");
+	}
+
+	@Test
+	void shouldDraftAOnePageCaseStudyFromUploadedFilesTest() throws Exception {
+		// Given: one upload the one-page draft service turns into measured fields and icons
+		when(sourceFileTextService.extractText("brief.pdf", "raw".getBytes())).thenReturn("Body");
+		when(onePageCaseStudyDraftService.draft(List.of(new SourceDocument("brief.pdf", "Body")), List.of()))
+				.thenReturn(new OnePageCaseStudyDraft(
+						List.of(new OnePageCaseStudyField("challenge", "The challenge", "Challenge & campaign",
+								"CPA rose.", OnePageFieldSource.FILES, 600, 5, 6, 2, OnePageFit.SHORT,
+								"Add detail")),
+						List.of(new OnePageCaseStudyIcon("plan_icon", "Game plan icon", "compass")),
+						List.of(new OnePageIconOption("compass", "Compass", "/case-study-icons/compass.png")),
+						"brief.pdf"));
+
+		// When: the one-page draft endpoint receives the upload
+		ResultActions response = mvc.perform(multipart(ONE_PAGE_DRAFTS_URL)
+				.file(new MockMultipartFile("files", "brief.pdf", null, "raw".getBytes()))
+				.with(validJwt()));
+
+		// Then: fields, fit, icons, and the library are rendered into the API DTO
+		response.andExpect(status().isOk())
+				.andExpect(jsonPath("$.fields[0].key").value("challenge"))
+				.andExpect(jsonPath("$.fields[0].source").value("FILES"))
+				.andExpect(jsonPath("$.fields[0].fit").value("SHORT"))
+				.andExpect(jsonPath("$.fields[0].lines").value(2))
+				.andExpect(jsonPath("$.icons[0].icon").value("compass"))
+				.andExpect(jsonPath("$.iconLibrary[0].imageUrl").value("/case-study-icons/compass.png"))
+				.andExpect(jsonPath("$.sourceFileNames").value("brief.pdf"));
+	}
+
+	@Test
+	void shouldRejectAOnePageDraftRequestWithNoFilesAsBadRequestTest() throws Exception {
+		// Given: a multipart request that carries no files part
+		// When: the one-page draft endpoint is called
+		ResultActions response = mvc.perform(multipart(ONE_PAGE_DRAFTS_URL).with(validJwt()));
+
+		// Then: the upload reader's C002 rejection surfaces as 400
+		response.andExpect(status().isBadRequest());
+		verifyNoInteractions(onePageCaseStudyDraftService);
+	}
+
+	@Test
+	void shouldMeasureReviewedOnePageValuesTest() throws Exception {
+		// Given: a service that measures the posted values
+		when(onePageCaseStudyDraftService.measureFields(List.of(new OnePageFieldValue("challenge", "CPA rose."))))
+				.thenReturn(List.of(new OnePageCaseStudyField("challenge", "The challenge", "Challenge & campaign",
+						"CPA rose.", OnePageFieldSource.FILES, 600, 5, 6, 1, OnePageFit.SHORT, "Add detail")));
+
+		// When: the fit endpoint receives one value
+		ResultActions response = mvc.perform(post(ONE_PAGE_FIT_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"fields\":[{\"key\":\"challenge\",\"value\":\"CPA rose.\"}]}"));
+
+		// Then: the measured field comes back with its fit
+		response.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].key").value("challenge"))
+				.andExpect(jsonPath("$[0].fit").value("SHORT"))
+				.andExpect(jsonPath("$[0].note").value("Add detail"));
+	}
+
+	@Test
+	void shouldRejectAMeasureRequestWithABlankKeyAsBadRequestTest() throws Exception {
+		// Given: a field value violating the contract's minLength on key
+		// When: it is posted
+		ResultActions response = mvc.perform(post(ONE_PAGE_FIT_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"fields\":[{\"key\":\"\",\"value\":\"CPA rose.\"}]}"));
+
+		// Then: the request is rejected without reaching the service
+		response.andExpect(status().isBadRequest());
+		verifyNoInteractions(onePageCaseStudyDraftService);
+	}
+
+	@Test
+	void shouldCreateAOnePageDeckAndForwardTheCallerAndRequestBaseUrlTest() throws Exception {
+		// Given: a service that publishes the one-page deck
+		CreateOnePageCaseStudyCommand command = new CreateOnePageCaseStudyCommand(
+				List.of(new OnePageFieldValue("title_line_1", "Scaling")),
+				List.of(new OnePageIconChoice("plan_icon", "compass"), new OnePageIconChoice("stat_1_icon", null)),
+				"brief.pdf", "user_123");
+		when(caseStudyService.createOnePage(eq(command), eq("http://localhost")))
+				.thenReturn(new CaseStudyRecord(9L, "SCALING", null, null, null, null, null, null, null, null,
+						"brief.pdf", null, "https://slides/9", "GENERATED", "user_123",
+						LocalDateTime.of(2026, 8, 1, 12, 0)));
+
+		// When: reviewed content is posted
+		ResultActions response = mvc.perform(post(ONE_PAGE_DECKS_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"fields\":[{\"key\":\"title_line_1\",\"value\":\"Scaling\"}],"
+						+ "\"icons\":[{\"slot\":\"plan_icon\",\"icon\":\"compass\"},"
+						+ "{\"slot\":\"stat_1_icon\",\"icon\":null}],\"sourceFileNames\":\"brief.pdf\"}"));
+
+		// Then: 201 with the record, and the command carries the JWT's user and the request's base URL
+		response.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.id").value(9))
+				.andExpect(jsonPath("$.slidesUrl").value("https://slides/9"));
+		ArgumentCaptor<CreateOnePageCaseStudyCommand> captured =
+				ArgumentCaptor.forClass(CreateOnePageCaseStudyCommand.class);
+		verify(caseStudyService).createOnePage(captured.capture(), eq("http://localhost"));
+		assertThat(captured.getValue().createdBy()).isEqualTo("user_123");
+		assertThat(captured.getValue().icons()).hasSize(2);
+	}
+
+	@Test
+	void shouldRejectAOnePageDeckWithAnOverlongValueAsBadRequestTest() throws Exception {
+		// Given: a field value one character past the contract's maxLength of 2000
+		String value = "x".repeat(2001);
+
+		// When: it is posted
+		ResultActions response = mvc.perform(post(ONE_PAGE_DECKS_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"fields\":[{\"key\":\"challenge\",\"value\":\"" + value + "\"}],\"icons\":[]}"));
+
+		// Then: the request is rejected without reaching the service
+		response.andExpect(status().isBadRequest());
+		verifyNoInteractions(caseStudyService);
 	}
 }

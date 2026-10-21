@@ -47,6 +47,11 @@ public class GoogleTemplateFileGatewayImpl implements GoogleTemplateFileGateway 
 	}
 
 	@Override
+	public JsonNode readPresentation(String accessToken, String presentationId, String action) {
+		return call(() -> googleWorkspaceClient.getPresentation(accessToken, presentationId), action);
+	}
+
+	@Override
 	public void fillDocument(String accessToken, String documentId, ArrayNode requests, String action) {
 		if (requests.isEmpty()) {
 			return;
