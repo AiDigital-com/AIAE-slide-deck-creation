@@ -3,8 +3,11 @@ package com.aidigital.strategyplanning.service.onepager.services.impl;
 import org.junit.jupiter.api.Test;
 
 import java.awt.Font;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 /**
  * Unit tests for width-based text fitting with the bundled title font.
@@ -65,14 +68,44 @@ class OnePagerTextFitterImplTest {
 		// Given: a fitter
 		OnePagerTextFitterImpl fitter = new OnePagerTextFitterImpl();
 
-		// When-Then: the bundled family is exact, anything else (or null) falls back to sans-serif
+		// When-Then: the bundled family is exact, anything else (or null) uses the bundled substitute
 		assertThat(fitter.bundledFont(TITLE_FONT)).isPresent();
 		assertThat(fitter.bundledFont("Inter Light")).isEmpty();
 		assertThat(fitter.bundledFont(null)).isEmpty();
 		assertThat(fitter.resolveFont(TITLE_FONT, 12.0).getFamily()).isEqualTo(TITLE_FONT);
-		assertThat(fitter.resolveFont("Unknown", 12.0).getFamily()).isEqualTo(Font.SANS_SERIF);
-		assertThat(fitter.resolveFont(null, 12.0).getSize2D()).isEqualTo(12.0f);
+		assertThat(fitter.resolveFont(TITLE_FONT, 12.0).getSize2D()).isEqualTo(12.0f);
 		assertThat(fitter.loadBundledFont("/fonts/does-not-exist.ttf")).isEmpty();
 		assertThat(fitter.loadBundledFont("/onepager/one-pager-master.pptx")).isEmpty();
+	}
+
+	@Test
+	void shouldMeasureAnUnbundledFamilyWithTheEnlargedBundledFontOnEveryPlatformTest() {
+		// Given: a fitter and a family that is not bundled (the KPI value's "Barlow Black")
+		OnePagerTextFitterImpl fitter = new OnePagerTextFitterImpl();
+
+		// When: fonts are resolved for that family and for no family at all
+		Font unbundled = fitter.resolveFont("Barlow Black", 20.0);
+		Font unnamed = fitter.resolveFont(null, 20.0);
+
+		// Then: both are the bundled title font enlarged by the substitute factor, never a system font
+		float expectedSize = (float) (20.0 * OnePagerTextFitterImpl.SUBSTITUTE_WIDTH_FACTOR);
+		assertThat(unbundled.getFamily()).isEqualTo(TITLE_FONT);
+		assertThat(unbundled.getSize2D()).isEqualTo(expectedSize);
+		assertThat(unnamed.getFamily()).isEqualTo(TITLE_FONT);
+		assertThat(unnamed.getSize2D()).isEqualTo(expectedSize);
+	}
+
+	@Test
+	void shouldFallBackToTheSystemSansSerifOnlyWhenTheBundledFontCannotBeLoadedTest() {
+		// Given: a fitter whose bundled title font fails to load
+		OnePagerTextFitterImpl fitter = spy(new OnePagerTextFitterImpl());
+		doReturn(Optional.empty()).when(fitter).loadBundledFont(OnePagerTextFitterImpl.TITLE_FONT_RESOURCE);
+
+		// When: a family that is not bundled is resolved
+		Font font = fitter.resolveFont("Barlow Black", 20.0);
+
+		// Then: measuring degrades to the platform sans-serif at the nominal size
+		assertThat(font.getFamily()).isEqualTo(Font.SANS_SERIF);
+		assertThat(font.getSize2D()).isEqualTo(20.0f);
 	}
 }

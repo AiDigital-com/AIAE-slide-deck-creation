@@ -18,10 +18,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * headless mode.
  *
  * <p>Only the title's font ("Barlow Semi Condensed Black", bundled with the Case Study fonts) is
- * measured exactly; other families (the KPI value's "Barlow Black") fall back to a bold
- * sans-serif, so a wider safety margin hedges the metric mismatch. Even the exact font is capped
- * below the full width: Google Slides' own kerning and hinting wrapped a line that AWT measured
- * at 95% of the box.
+ * measured exactly. Other families (the KPI value's "Barlow Black") are measured with that same
+ * bundled font enlarged by {@link #SUBSTITUTE_WIDTH_FACTOR}, because regular-width Barlow is wider
+ * than Semi Condensed. The substitute is deliberately a bundled font and never a system font:
+ * the logical sans-serif family resolves to a different physical font on every operating
+ * system, which made the same text fit on a developer machine and overflow on the server. A wider
+ * safety margin still hedges the remaining metric mismatch. Even the exact font is capped below
+ * the full width: Google Slides' own kerning and hinting wrapped a line that AWT measured at 95%
+ * of the box.
  */
 @Slf4j
 @Service
@@ -35,6 +39,16 @@ public class OnePagerTextFitterImpl implements OnePagerTextFitter {
 
 	/** Classpath resource of the bundled title font. */
 	public static final String TITLE_FONT_RESOURCE = "/fonts/case-study/BarlowSemiCondensed-Black.ttf";
+
+	/** Family name the bundled title font reports, and the one the master uses for titles. */
+	public static final String TITLE_FONT_FAMILY = "Barlow Semi Condensed Black";
+
+	/**
+	 * Size multiplier applied to the bundled font when measuring a family that is not bundled.
+	 * Regular-width Barlow is roughly 12% wider than Barlow Semi Condensed, so the substitute is
+	 * enlarged by that amount to avoid under-measuring.
+	 */
+	public static final double SUBSTITUTE_WIDTH_FACTOR = 1.12;
 
 	private static final String HEADLESS_PROPERTY = "java.awt.headless";
 	private static final String WORD_SEPARATOR = " ";
@@ -105,7 +119,8 @@ public class OnePagerTextFitterImpl implements OnePagerTextFitter {
 
 	/**
 	 * Resolves the font to measure with at the given size: the bundled exact font when the family
-	 * matches, otherwise a bold sans-serif fallback. Derived fonts are cached per family and size.
+	 * matches, otherwise the bundled substitute from {@link #substituteFont(double)}. Derived
+	 * fonts are cached per family and size.
 	 *
 	 * @param fontFamily font family read from the master shape, may be null
 	 * @param fontSizePt font size in points
@@ -114,8 +129,23 @@ public class OnePagerTextFitterImpl implements OnePagerTextFitter {
 	Font resolveFont(String fontFamily, double fontSizePt) {
 		String key = fontFamily + "@" + fontSizePt;
 		return derivedFonts.computeIfAbsent(key, k -> bundledFont(fontFamily)
-				.orElseGet(() -> new Font(Font.SANS_SERIF, Font.BOLD, 1))
-				.deriveFont((float) fontSizePt));
+				.map(font -> font.deriveFont((float) fontSizePt))
+				.orElseGet(() -> substituteFont(fontSizePt)));
+	}
+
+	/**
+	 * Builds the font used to measure a family that is not bundled. It is the bundled title font
+	 * enlarged by {@link #SUBSTITUTE_WIDTH_FACTOR}, so the result is identical on every operating
+	 * system. Only when the bundled font cannot be loaded does it degrade to the platform's bold
+	 * sans-serif.
+	 *
+	 * @param fontSizePt nominal font size in points
+	 * @return the substitute font at the enlarged size
+	 */
+	Font substituteFont(double fontSizePt) {
+		return bundledFont(TITLE_FONT_FAMILY)
+				.map(font -> font.deriveFont((float) (fontSizePt * SUBSTITUTE_WIDTH_FACTOR)))
+				.orElseGet(() -> new Font(Font.SANS_SERIF, Font.BOLD, 1).deriveFont((float) fontSizePt));
 	}
 
 	/**
