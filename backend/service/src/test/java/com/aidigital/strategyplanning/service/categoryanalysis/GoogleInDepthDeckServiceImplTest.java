@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
  * Unit tests for {@link GoogleInDepthDeckServiceImpl}: access checks, the copy-delete-fill
  * sequence, and best-effort chart updates.
  */
-class InDepthGoogleDeckServiceImplTest {
+class GoogleInDepthDeckServiceImplTest {
 
 	private static final String TOKEN = "ya29.token";
 	private static final Set<GoogleOAuthScope> SCOPES = Set.of(GoogleOAuthScope.DRIVE, GoogleOAuthScope.SLIDES);
