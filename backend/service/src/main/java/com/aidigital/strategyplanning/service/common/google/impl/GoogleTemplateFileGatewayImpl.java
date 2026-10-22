@@ -22,6 +22,15 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 public class GoogleTemplateFileGatewayImpl implements GoogleTemplateFileGateway {
 
+	/** Drive MIME type of a native Google Slides presentation. */
+	public static final String SLIDES_MIME_TYPE = "application/vnd.google-apps.presentation";
+
+	/** MIME type of a PowerPoint (OOXML) presentation. */
+	public static final String PPTX_MIME_TYPE =
+			"application/vnd.openxmlformats-officedocument.presentationml.presentation";
+
+	private static final String NO_FILE_ID_MESSAGE = "Google Drive upload returned no file ID";
+
 	private final ObjectMapper objectMapper;
 	private final GoogleWorkspaceClient googleWorkspaceClient;
 
@@ -47,12 +56,33 @@ public class GoogleTemplateFileGatewayImpl implements GoogleTemplateFileGateway 
 	}
 
 	@Override
+	public JsonNode readPresentation(String accessToken, String presentationId, String action) {
+		return call(() -> googleWorkspaceClient.getPresentation(accessToken, presentationId), action);
+	}
+
+	@Override
 	public void fillDocument(String accessToken, String documentId, ArrayNode requests, String action) {
 		if (requests.isEmpty()) {
 			return;
 		}
 		call(() -> googleWorkspaceClient.batchUpdateDocument(accessToken, documentId,
 				requestsBody(requests)), action);
+	}
+
+	@Override
+	public byte[] exportPresentation(String accessToken, String presentationId, String action) {
+		return call(() -> googleWorkspaceClient.exportDriveFile(accessToken, presentationId, PPTX_MIME_TYPE), action);
+	}
+
+	@Override
+	public String uploadPresentation(String accessToken, String title, byte[] pptxBytes, String action) {
+		JsonNode result = call(() -> googleWorkspaceClient.uploadDriveFile(accessToken, title, SLIDES_MIME_TYPE,
+				pptxBytes, PPTX_MIME_TYPE), action);
+		String id = result.path("id").asText("");
+		if (!StringUtils.hasText(id)) {
+			throw new AppException(ErrorReason.C003, NO_FILE_ID_MESSAGE);
+		}
+		return id;
 	}
 
 	/**
@@ -71,12 +101,13 @@ public class GoogleTemplateFileGatewayImpl implements GoogleTemplateFileGateway 
 	 * Runs a Google call and translates a provider failure into an application error that names
 	 * the action the user was trying to perform.
 	 *
+	 * @param <T>    the call's response type
 	 * @param call   the Google call to run
 	 * @param action human-readable description of what the call was for
 	 * @return the call's response
 	 * @throws AppException with C003 reason when the call fails
 	 */
-	JsonNode call(Supplier<JsonNode> call, String action) {
+	<T> T call(Supplier<T> call, String action) {
 		try {
 			return call.get();
 		} catch (GoogleApiException e) {

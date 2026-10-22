@@ -29,9 +29,13 @@ public class GoogleSlidesGatewayImpl implements GoogleSlidesGateway {
 
 	@Override
 	public String copyTemplate(String accessToken, String deckTitle) {
+		return copyPresentation(accessToken, properties.getTemplatePresentationId(), deckTitle);
+	}
+
+	@Override
+	public String copyPresentation(String accessToken, String templatePresentationId, String deckTitle) {
 		JsonNode result = call(
-				() -> googleWorkspaceClient.copyDriveFile(accessToken,
-						properties.getTemplatePresentationId(), deckTitle),
+				() -> googleWorkspaceClient.copyDriveFile(accessToken, templatePresentationId, deckTitle),
 				"copy the master template into your Google Drive");
 		String id = result.path("id").asText("");
 		if (!StringUtils.hasText(id)) {

@@ -102,19 +102,25 @@ describe("StrategyToolkit", () => {
         }
     });
 
-    it("should label each tool icon so it is not announced as bare punctuation test", () => {
-        // Given: the toolkit home page, whose icons are emoji
-        render(
+    it("should render each tool icon as a decorative image so the heading alone names the tool test", () => {
+        // Given: the toolkit home page, whose icons are PNGs from the master template
+        const { container } = render(
             <MemoryRouter>
                 <StrategyToolkit />
             </MemoryRouter>,
         );
 
-        // When-Then: each icon carries its tool's name, so a screen reader announces the
-        // tool rather than reading the emoji character
+        // When: the card icons are collected
+        const icons = Array.from(container.querySelectorAll("img.tool-card__icon"));
+
+        // Then: every tool ships its icon with an empty alt, so a screen reader announces
+        // the card heading once instead of the heading plus a redundant image name
         for (const tool of TOOLS) {
-            expect(screen.getByRole("img", { name: tool.title })).toBeTruthy();
+            const icon = icons.find((img) => img.getAttribute("src") === tool.icon);
+            expect(icon).toBeTruthy();
+            expect(icon!.getAttribute("alt")).toBe("");
         }
+        expect(screen.queryByRole("img")).toBeNull();
     });
 
     it("should show the coming-soon placeholder as non-interactive test", () => {
@@ -126,11 +132,11 @@ describe("StrategyToolkit", () => {
         );
 
         // When: the placeholder card is located
-        const placeholder = screen.getByRole("heading", { name: "More Tools" });
+        const placeholder = screen.getByRole("heading", { name: "More tools coming" });
 
         // Then: it renders but offers nothing to click, so it cannot be mistaken for a
         // broken tool
         expect(placeholder).toBeTruthy();
-        expect(screen.queryByRole("button", { name: /More Tools/i })).toBeNull();
+        expect(screen.queryByRole("button", { name: /More tools coming/i })).toBeNull();
     });
 });

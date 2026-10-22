@@ -31,8 +31,10 @@ import java.util.Locale;
 /**
  * Default implementation of {@link SourceFileTextService}. Detects the document format by file
  * extension and extracts readable text: PDFBox for PDF, Apache POI for Word/PowerPoint/Excel, and
- * plain UTF-8 decoding for CSV/TXT. Excel sheets are rendered row by row with " | " between cells
- * so the AI drafting engine can interpret the tabular data.
+ * plain UTF-8 decoding for CSV/TXT/Markdown. Images are never routed here; see
+ * {@link com.aidigital.strategyplanning.service.common.files.SourceImageService}. Excel sheets are
+ * rendered row by row with " | " between cells so the AI drafting engine can interpret the tabular
+ * data.
  */
 @Service
 public class SourceFileTextServiceImpl implements SourceFileTextService {
@@ -57,10 +59,10 @@ public class SourceFileTextServiceImpl implements SourceFileTextService {
 				case "ppt" -> extractPptText(bytes);
 				case "xlsx" -> extractWorkbookText(new XSSFWorkbook(new ByteArrayInputStream(bytes)));
 				case "xls" -> extractWorkbookText(new HSSFWorkbook(new ByteArrayInputStream(bytes)));
-				case "csv", "txt" -> new String(bytes, StandardCharsets.UTF_8);
+				case "csv", "txt", "md" -> new String(bytes, StandardCharsets.UTF_8);
 				default -> throw new AppException(ErrorReason.C002,
 						"Unsupported file type \"." + extension + "\" for " + fileName
-								+ " — supported: PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, CSV");
+								+ " — supported: PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, CSV, TXT, MD");
 			};
 			String collapsed = text.replaceAll("[ \\t\\x0B\\f\\r]+", " ")
 					.replaceAll("\\n{3,}", "\n\n")

@@ -26,6 +26,8 @@ tags:
     description: RnD Request Triage — triage growth-team feature/product requests by deal size and draft a relay-ready response
   - name: RfpOutlines
     description: RFP Outline Generator — draft a point-of-view and response deck outline from an uploaded RFP, and export it to Google Docs
+  - name: OnePagers
+    description: One Page Generator — brief a vertical one-pager and assemble a single Google Slides page from the master template's shell and body modules
 
 paths:
   /api/v1/auth/me:
@@ -152,11 +154,13 @@ paths:
     post:
       tags: [ CaseStudies ]
       operationId: draftCaseStudy
-      summary: AI-draft case study fields from uploaded source documents
+      summary: AI-draft case study fields from uploaded source documents and screenshots
       description: |
-        Accepts up to 10 source documents (PDF, PowerPoint, Excel, or CSV), extracts their
-        readable content — including tabular data from Excel workbooks — and uses the AI
-        drafting engine to pre-fill every case study form field. The result is meant to be
+        Accepts up to 10 source files (PDF, Word, PowerPoint, Excel, CSV, text/Markdown, or
+        PNG/JPEG/WebP screenshots), extracts the readable content of the documents — including
+        tabular data from Excel workbooks — passes screenshots to the AI drafting engine as images
+        so it can read figures shown in them, and uses the engine to pre-fill every case study
+        form field. Each screenshot must be 10 MB or smaller. The result is meant to be
         reviewed and edited by the user before submission; metrics and quotes are AI-extracted
         and must be verified against the source documents.
       security: [ { bearerAuth: [ ] } ]
@@ -172,13 +176,13 @@ paths:
               properties:
                 files:
                   type: array
-                  description: Uploaded source documents (PDF, PPTX, PPT, XLSX, XLS, or CSV). Maximum 10 files.
+                  description: Uploaded source files (PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, CSV, TXT, MD, PNG, JPG, JPEG, or WEBP). Maximum 10 files; each image at most 10 MB.
                   minItems: 1
                   maxItems: 10
                   items:
                     type: string
                     format: binary
-                    description: One uploaded source document.
+                    description: One uploaded source document or screenshot.
       responses:
         "200":
           description: Drafted case study fields for review.
@@ -187,7 +191,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CaseStudyDraftV1"
         "400":
-          description: Request validation failed (no files, more than 10 files, or an unsupported/unreadable file).
+          description: Request validation failed (no files, more than 10 files, an image over 10 MB, or an unsupported/unreadable file).
           content:
             application/json:
               schema:
@@ -208,6 +212,174 @@ paths:
                 $ref: "#/components/schemas/AppApiExceptionResponseV1"
         "500":
           description: Exception occurred while drafting the case study.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/case-studies/one-page-drafts:
+    post:
+      tags: [ CaseStudies ]
+      operationId: draftOnePageCaseStudy
+      summary: AI-draft the One-Page Case Study from uploaded source documents and screenshots
+      description: |
+        Accepts up to 10 source files (PDF, Word, PowerPoint, Excel, CSV, text/Markdown, or
+        PNG/JPEG/WebP screenshots) and drafts every field of the One-Page Case Study template.
+        Facts (figures, dates, channels, results) come only from the documents; short titles and
+        labels may be AI-written for flow. Fields the documents do not support come back empty.
+        Every value is measured in its real text box with the template's fonts and revised until
+        it fits; values the material cannot stretch to fill a box are flagged for the reviewer.
+        Also proposes an icon from the template's icon library for each icon slot. Each screenshot
+        must be 10 MB or smaller.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Source documents to draft from. Between 1 and 10 files.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              description: Multipart payload carrying the uploaded source documents.
+              required: [ files ]
+              properties:
+                files:
+                  type: array
+                  description: Uploaded source files (PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, CSV, TXT, MD, PNG, JPG, JPEG, or WEBP). Maximum 10 files; each image at most 10 MB.
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                    format: binary
+                    description: One uploaded source document or screenshot.
+      responses:
+        "200":
+          description: Drafted One-Page Case Study fields and icon picks for review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnePageCaseStudyDraftV1"
+        "400":
+          description: Request validation failed (no files, more than 10 files, an image over 10 MB, or an unsupported/unreadable file).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured or the drafting call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while drafting the case study.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/case-studies/one-page-fit:
+    post:
+      tags: [ CaseStudies ]
+      operationId: measureOnePageCaseStudy
+      summary: Measure One-Page Case Study values against their boxes on the slide
+      description: |
+        Wraps each value in its real box on the One-Page Case Study template, using the template's
+        fonts, and reports how many lines it takes and whether it fills the box without overflowing.
+        Used by the review form to re-check edited values.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Reviewed values to measure, keyed by template field.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeasureOnePageCaseStudyRequestV1"
+      responses:
+        "200":
+          description: Every field with its measured fit.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Every template field in slide order.
+                items:
+                  $ref: "#/components/schemas/OnePageCaseStudyFieldV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while measuring the fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/case-studies/one-page-decks:
+    post:
+      tags: [ CaseStudies ]
+      operationId: createOnePageCaseStudy
+      summary: Create the One-Page Case Study deck in Google Slides
+      description: |
+        Copies the One-Page Case Study template into the user's Google Drive, fills every token
+        with the reviewed values (blank values clear their box), swaps each tagged icon for the
+        chosen library icon, and records the case study. The template's hero photo is left as a
+        placeholder for the user to replace.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Reviewed field values and icon choices to build the deck from.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOnePageCaseStudyRequestV1"
+      responses:
+        "201":
+          description: Deck created; the case study record includes the Google Slides URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseStudyV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: Google is not connected or a Google API call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the deck.
           content:
             application/json:
               schema:
@@ -762,6 +934,341 @@ paths:
               schema:
                 $ref: "#/components/schemas/AppApiExceptionResponseV1"
 
+  /api/v1/category-analyses/in-depth-slides:
+    get:
+      tags: [ CategoryAnalyses ]
+      operationId: listInDepthSlides
+      summary: List the selectable slides of the In-Depth Category Analysis master template
+      description: |
+        Returns the full 24-slide catalog of the In-Depth template's master deck for the
+        "check to include" preview. Several slides are alternate layouts of the same content
+        topic and each one is independently checkable; the catalog is static and needs no input.
+      security: [ { bearerAuth: [ ] } ]
+      responses:
+        "200":
+          description: Every selectable slide, in master-template order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InDepthSlideV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while listing the slide catalog.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/in-depth-drafts:
+    post:
+      tags: [ CategoryAnalyses ]
+      operationId: draftInDepthCategoryAnalysis
+      summary: AI-draft the checked fields of an In-Depth Category Analysis
+      description: |
+        Drafts every field belonging to the slides the user checked in the "check to include"
+        preview: the content is drafted first from the model's own knowledge, then its
+        statistics and sources are fact-checked against live web search, and the client's
+        website is reviewed, when it can be read, to confirm the category fits the client's
+        actual business. The result is meant to be reviewed and edited by the user before deck
+        creation. Stats and sources are AI-drafted and must be verified before client use.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Short brief plus the checked slide numbers. Category, client name, client website, and at least one selected slide are required.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InDepthDraftRequestV1"
+      responses:
+        "200":
+          description: Drafted field set for the checked slides, for review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InDepthDraftV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured or the drafting call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while drafting the analysis.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/in-depth-drafts/slide:
+    post:
+      tags: [ CategoryAnalyses ]
+      operationId: redraftInDepthCategorySlide
+      summary: AI-redraft the fields of a single slide of an In-Depth Category Analysis
+      description: |
+        Re-drafts only the fields of one checked slide of the In-Depth template, grounded in
+        live web search, using the original brief plus an optional per-slide guidance note. The
+        current values of the checked deck are supplied as context so the redraft stays
+        consistent with the slides the user is keeping. Only the returned slide's fields should
+        replace existing values; edits on other slides are preserved by the caller. Stats and
+        sources are AI-drafted and must be verified before client use.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Brief, slide number, optional per-slide note, and current checked-deck values for context.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedraftInDepthSlideRequestV1"
+      responses:
+        "200":
+          description: Redrafted field set for the requested slide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InDepthDraftV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured or the drafting call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while redrafting the slide.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/category-analyses/in-depth-decks:
+    post:
+      tags: [ CategoryAnalyses ]
+      operationId: createInDepthCategoryDeck
+      summary: Create the In-Depth Category Analysis deck in the user's Google Slides
+      description: |
+        Copies the master In-Depth Category Analysis template into the authenticated user's own
+        Google Drive, deletes every slide not checked in the "check to include" preview, fills
+        the tokens of the remaining slides with the reviewed field values, redraws the slide-8
+        donut chart and resizes the slide-18 bars to their values, and returns the new
+        presentation's URL. Requires the user's Google account (via Clerk SSO) to grant Drive
+        and Slides access.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Reviewed field values and the checked slide set for deck creation.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInDepthDeckRequestV1"
+      responses:
+        "201":
+          description: Deck created in the user's Google Drive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryAnalysisV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: Google Drive/Slides access not granted or the Google API call failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the deck.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/one-pagers/connections:
+    get:
+      tags: [ OnePagers ]
+      operationId: getOnePagerConnections
+      summary: Report connection status for the One Page Generator
+      description: |
+        Reports whether the AI drafting engine is configured and whether the authenticated
+        user's Google account currently grants Drive & Slides access via Clerk SSO. The same
+        Clerk Google connection backs every deck tool, so the status mirrors the Category
+        Analysis check.
+      security: [ { bearerAuth: [ ] } ]
+      responses:
+        "200":
+          description: Connection status flags.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardConnectionsV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while checking connection status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/one-pagers/drafts:
+    post:
+      tags: [ OnePagers ]
+      operationId: draftOnePager
+      summary: AI-draft a One Page Generator page from a guidance brief
+      description: |
+        Fits a guidance brief into the fixed section structure of the chosen body modules
+        (header, then each module named in moduleOrder). Unlike the Category Analysis drafters,
+        this never uses web search: every fact, figure, and claim is expected to already be in
+        the brief, and the AI only tightens wording into each module's character budgets. The
+        result is meant to be reviewed and edited by the user before the page is created.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Guidance brief plus the body modules to draft, in page order.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnePagerDraftRequestV1"
+      responses:
+        "200":
+          description: Drafted page content, for review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnePagerDraftV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: AI drafting engine not configured, or the drafting call failed or came back incomplete.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while drafting the page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
+  /api/v1/one-pagers/decks:
+    post:
+      tags: [ OnePagers ]
+      operationId: createOnePagerDeck
+      summary: Assemble the One Page Generator page and save it to the user's Google Slides
+      description: |
+        Exports the master template (read-only; the master is never copied or edited), builds
+        the chosen header/footer shell plus the reviewed body modules into one slide, sizes the
+        page to its content, and uploads the result as a brand-new native Google Slides file in
+        the user's Drive. Requires the user's Google account (via Clerk SSO) to grant Drive and
+        Slides access. Nothing is recorded server-side; the page lives only in the user's Drive.
+      security: [ { bearerAuth: [ ] } ]
+      requestBody:
+        required: true
+        description: Final reviewed page content, the shell to build onto, and the file title inputs.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOnePagerRequestV1"
+      responses:
+        "201":
+          description: One-pager created in the user's Google Drive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnePagerDeckV1"
+        "400":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppValidationExceptionResponseV1"
+        "401":
+          description: The authorization token not provided or expired.
+        "403":
+          description: The authorization token not correct or user not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "502":
+          description: Google Drive/Slides access not granted, a Google API call failed, or the page could not be assembled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+        "500":
+          description: Exception occurred while creating the page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppApiExceptionResponseV1"
+
   /api/v1/rnd-requests:
     get:
       tags: [ RndRequests ]
@@ -1016,6 +1523,191 @@ components:
           type: string
           format: date-time
           description: UTC timestamp when the case study was created.
+
+    OnePageFieldSourceV1:
+      type: string
+      enum: [ FILES, WRITTEN ]
+      description: Where a One-Page field's content may come from — FILES when the value must come from the uploaded documents, WRITTEN when the AI may phrase it (titles, labels).
+
+    OnePageFitV1:
+      type: string
+      enum: [ FITS, SHORT, OVER, EMPTY ]
+      description: How a value sits in its box on the slide — FITS fills the box without overflowing, SHORT leaves part of it empty, OVER runs past it, EMPTY leaves it blank on purpose.
+
+    OnePageCaseStudyFieldV1:
+      type: object
+      additionalProperties: false
+      description: One drafted text field of the One-Page Case Study template, with how it fits its box on the slide.
+      required: [ key, label, section, value, source, maxChars, minLines, maxLines, lines, fit ]
+      properties:
+        key:
+          type: string
+          description: Template token key, e.g. tactic_1_title.
+        label:
+          type: string
+          description: Human-readable field label.
+        section:
+          type: string
+          description: Template section the field belongs to, used to group the review form.
+        value:
+          type: string
+          description: Drafted value; empty when the documents do not support one.
+        source:
+          description: Where the value may come from — the uploaded files or AI wording.
+          allOf:
+            - $ref: "#/components/schemas/OnePageFieldSourceV1"
+        maxChars:
+          type: integer
+          format: int32
+          description: Hard character ceiling (a safety net; the measured line limit is what matters).
+        minLines:
+          type: integer
+          format: int32
+          description: Lines that fill the field's box on the slide; 0 when the field has no fill target.
+        maxLines:
+          type: integer
+          format: int32
+          description: Lines that fit the field's box before it runs into the next element; 0 when the field is limited by characters rather than lines.
+        lines:
+          type: integer
+          format: int32
+          description: Lines the value wraps to in its box, measured with the template's fonts; 0 when empty or not measured in lines.
+        fit:
+          description: How the value sits in its box; a field limited by characters rather than lines is FITS or EMPTY.
+          allOf:
+            - $ref: "#/components/schemas/OnePageFitV1"
+        note:
+          type: string
+          nullable: true
+          description: Explanation for the reviewer when the source files could not fill the box.
+
+    OnePageCaseStudyIconV1:
+      type: object
+      additionalProperties: false
+      description: One icon slot on the template and the library icon chosen for it.
+      required: [ slot, label ]
+      properties:
+        slot:
+          type: string
+          description: Icon slot key, matching the icon's alt text without braces, e.g. tactic_1_icon.
+        label:
+          type: string
+          description: Human-readable slot label.
+        icon:
+          type: string
+          nullable: true
+          description: Chosen library icon name; null keeps the template's original icon.
+
+    OnePageCaseStudyIconOptionV1:
+      type: object
+      additionalProperties: false
+      description: One icon in the template's icon library.
+      required: [ name, description, imageUrl ]
+      properties:
+        name:
+          type: string
+          description: Library icon name.
+        description:
+          type: string
+          description: What the icon shows.
+        imageUrl:
+          type: string
+          description: App-relative URL of the icon image.
+
+    OnePageCaseStudyDraftV1:
+      type: object
+      additionalProperties: false
+      description: AI-drafted One-Page Case Study fields and icon picks, for review before deck creation.
+      required: [ fields, icons, iconLibrary, sourceFileNames ]
+      properties:
+        fields:
+          type: array
+          description: Every template text field in slide order.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyFieldV1"
+        icons:
+          type: array
+          description: Every icon slot with its proposed library icon.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyIconV1"
+        iconLibrary:
+          type: array
+          description: All icons the user can pick from.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyIconOptionV1"
+        sourceFileNames:
+          type: string
+          description: Comma-separated names of the uploaded source files the draft was produced from.
+
+    OnePageCaseStudyFieldValueV1:
+      type: object
+      additionalProperties: false
+      description: One reviewed One-Page field value keyed by its template token.
+      required: [ key, value ]
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Template token key.
+        value:
+          type: string
+          maxLength: 2000
+          description: Reviewed value; empty clears the field's box.
+
+    OnePageCaseStudyIconChoiceV1:
+      type: object
+      additionalProperties: false
+      description: One reviewed icon choice for a template icon slot.
+      required: [ slot ]
+      properties:
+        slot:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Icon slot key.
+        icon:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: Library icon name; null keeps the template's original icon.
+
+    MeasureOnePageCaseStudyRequestV1:
+      type: object
+      additionalProperties: false
+      description: Values to measure against their boxes on the slide.
+      required: [ fields ]
+      properties:
+        fields:
+          type: array
+          maxItems: 100
+          description: Values keyed by template field; fields left out are measured as blank.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyFieldValueV1"
+
+    CreateOnePageCaseStudyRequestV1:
+      type: object
+      additionalProperties: false
+      description: Reviewed One-Page Case Study content to build the deck from.
+      required: [ fields, icons ]
+      properties:
+        fields:
+          type: array
+          maxItems: 100
+          description: Reviewed values for the template's text fields.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyFieldValueV1"
+        icons:
+          type: array
+          maxItems: 50
+          description: Reviewed icon choices.
+          items:
+            $ref: "#/components/schemas/OnePageCaseStudyIconChoiceV1"
+        sourceFileNames:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Comma-separated names of the source files the content came from.
 
     CreateCaseStudyRequestV1:
       type: object
@@ -1336,6 +2028,10 @@ components:
           type: string
           nullable: true
           description: URL of the generated Google Slides presentation in the user's Drive, when created.
+        templateKind:
+          type: string
+          nullable: true
+          description: Template the row was generated from — "STANDARD", "IN_DEPTH", or "ONE_PAGER" (One Page Generator pages are stored as category-analysis rows); null for manual submissions.
         status:
           description: Lifecycle state of the category analysis deck generation.
           allOf:
@@ -1393,7 +2089,7 @@ components:
         templateKind:
           type: string
           nullable: true
-          description: Template used for generation (e.g. "STANDARD"), null for manual submissions.
+          description: Template the row was generated from — "STANDARD", "IN_DEPTH", or "ONE_PAGER" (One Page Generator pages are stored as category-analysis rows); null for manual submissions.
         status:
           description: Lifecycle state of the category analysis deck generation.
           allOf:
@@ -1640,6 +2336,572 @@ components:
           description: Final reviewed values for every template field.
           items:
             $ref: "#/components/schemas/StandardFieldValueV1"
+
+    InDepthSlideV1:
+      type: object
+      additionalProperties: false
+      description: One selectable slide of the In-Depth template's master deck.
+      required: [ slideNumber, title, defaultChecked ]
+      properties:
+        slideNumber:
+          type: integer
+          format: int32
+          description: 1-based position in the master template (not renumbered after slides are excluded).
+        title:
+          type: string
+          description: Short human-readable label for the "check to include" checklist.
+        defaultChecked:
+          type: boolean
+          description: Whether this slide is checked by default when the picker first loads.
+
+    InDepthDraftRequestV1:
+      type: object
+      additionalProperties: false
+      description: Short brief plus checked slides used to AI-draft an In-Depth Category Analysis.
+      required: [ category, clientName, clientWebsite, selectedSlides ]
+      properties:
+        category:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Market category or industry being analysed (e.g. "Regional Travel", "Western Boots").
+        clientName:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Client the analysis is prepared for (e.g. "Alberta Boot").
+        clientWebsite:
+          type: string
+          maxLength: 2048
+          minLength: 1
+          description: >-
+            Client's website URL (e.g. "https://albertaboot.com"). The builder reviews the
+            site, when it can be read, to understand the client's business focus and confirm
+            the deck aligns with it.
+        guidanceNotes:
+          type: string
+          maxLength: 10000
+          nullable: true
+          description: Optional focus areas, angles, or constraints to steer the draft.
+        selectedSlides:
+          type: array
+          minItems: 1
+          maxItems: 24
+          description: Slide numbers checked in the "check to include" preview (see the in-depth slide catalog).
+          items:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 24
+            description: 1-based slide number of the master template.
+
+    InDepthDraftFieldV1:
+      type: object
+      additionalProperties: false
+      description: One drafted template field, written to every checked slide that shares it.
+      required: [ key, label, slideNumbers, value ]
+      properties:
+        key:
+          type: string
+          description: Stable template token key (e.g. "trend_headline").
+        label:
+          type: string
+          description: Human-readable label shown in the review UI.
+        slideNumbers:
+          type: array
+          description: Every slide in the master template this field belongs to (more than one entry when shared across layout variants of the same topic).
+          items:
+            type: integer
+            format: int32
+            description: 1-based slide number of the master template.
+        value:
+          type: string
+          description: Drafted text value; editable by the user before deck creation.
+
+    InDepthDraftV1:
+      type: object
+      additionalProperties: false
+      description: AI-drafted field set for the In-Depth Category Analysis template, scoped to the checked slides.
+      required: [ fields ]
+      properties:
+        fields:
+          type: array
+          description: Drafted fields for the checked slides, ordered by the template's token registry.
+          items:
+            $ref: "#/components/schemas/InDepthDraftFieldV1"
+        alignment:
+          nullable: true
+          description: >-
+            How closely the draft matched the requested category and client. Absent for
+            single-slide redrafts and for selections with no draftable content, where no website
+            review is performed.
+          allOf:
+            - $ref: "#/components/schemas/DraftAlignmentV1"
+
+    RedraftInDepthSlideRequestV1:
+      type: object
+      additionalProperties: false
+      description: Brief plus current deck context used to AI-redraft a single slide of an In-Depth Category Analysis.
+      required: [ category, clientName, slideNumber, currentFields ]
+      properties:
+        category:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Market category or industry being analysed.
+        clientName:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Client the analysis is prepared for.
+        guidanceNotes:
+          type: string
+          maxLength: 10000
+          nullable: true
+          description: Original brief focus areas or constraints, may be null.
+        slideNumber:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 24
+          description: Slide to redraft (matches a slideNumber from the in-depth slide catalog).
+        slideNote:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Optional guidance for this redraft (e.g. "make it more data-driven", "focus on Gen Z").
+        currentFields:
+          type: array
+          maxItems: 400
+          description: Current values for every field of the checked slides, supplied as context so the redraft stays consistent with slides being kept.
+          items:
+            $ref: "#/components/schemas/InDepthFieldValueV1"
+
+    InDepthFieldValueV1:
+      type: object
+      additionalProperties: false
+      description: A reviewed field value keyed by its In-Depth template token.
+      required: [ key, value ]
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Stable template token key.
+        value:
+          type: string
+          maxLength: 20000
+          description: Final reviewed text value.
+
+    CreateInDepthDeckRequestV1:
+      type: object
+      additionalProperties: false
+      description: Reviewed field values and checked slide set used to create the deck in the user's Google Slides.
+      required: [ category, clientName, selectedSlides, fields ]
+      properties:
+        category:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Market category or industry being analysed.
+        clientName:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Client the analysis is prepared for.
+        selectedSlides:
+          type: array
+          minItems: 1
+          maxItems: 24
+          description: Slide numbers checked in the "check to include" preview; every other slide is deleted from the copied template.
+          items:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 24
+            description: 1-based slide number of the master template.
+        fields:
+          type: array
+          maxItems: 400
+          description: Final reviewed values for every field of the checked slides.
+          items:
+            $ref: "#/components/schemas/InDepthFieldValueV1"
+
+    OnePagerModuleKeyV1:
+      type: string
+      description: |
+        A body module of the One Page Generator page, used to describe stacking order.
+        TRACKER — the 5-step process tracker; SOLUTIONS — the 5 core-solution cards;
+        KPIS — the 4 performance-signal tiles; IMAGE_TEXT — an image paired with a section title
+        and paragraph; KEY_TAKEAWAY — a single callout bar; IMPACT_STATS — 3 large
+        percent/multiplier stats with descriptions; CAPABILITY_CARDS — 3 uniform cards each with
+        a title, description, checklist, and footer; SPOTLIGHT_CARDS — 3 intentionally different
+        cards (an image, a KPI-chip cluster, and 3 connected stage-name pills); INSIGHT_CARDS —
+        3 icon-and-insight cards; PHOTO — a standalone full-bleed photo; SOLUTIONS_VISUAL — an
+        optional companion visual beside the core-solution cards, rendered only when SOLUTIONS
+        is also present; MILESTONE_BANNER — a photo banner with a headline and 3 numbered steps.
+      enum: [ TRACKER, SOLUTIONS, KPIS, IMAGE_TEXT, KEY_TAKEAWAY, IMPACT_STATS,
+              CAPABILITY_CARDS, SPOTLIGHT_CARDS, INSIGHT_CARDS, PHOTO, SOLUTIONS_VISUAL, MILESTONE_BANNER ]
+
+    OnePagerShellVariantV1:
+      type: string
+      description: |
+        Which header/footer shell of the master template the page is built onto, matching the
+        master's slides 1-3. BLUE_HEADER — shell 1, blue header block; HERO_GRAPHIC — shell 2,
+        large hero graphic (least body room); TOP_BAR — shell 3, thin top bar.
+      enum: [ BLUE_HEADER, HERO_GRAPHIC, TOP_BAR ]
+
+    OnePagerSolutionV1:
+      type: object
+      additionalProperties: false
+      description: One core-solution card in the One Page Generator body.
+      required: [ title, valueLine, body ]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Short solution name, e.g. "VIN-LEVEL DYNAMIC CREATIVE OPTIMIZATION".
+        valueLine:
+          type: string
+          maxLength: 200
+          description: Short bold value-oriented subhead.
+        body:
+          type: string
+          maxLength: 500
+          description: Explanatory copy, roughly 25-40 words.
+
+    OnePagerKpiV1:
+      type: object
+      additionalProperties: false
+      description: One performance-signal KPI tile (or spotlight KPI chip) in the One Page Generator body.
+      required: [ value, label ]
+      properties:
+        value:
+          type: string
+          maxLength: 20
+          description: Large headline value, e.g. "30%" or "2X". The tile never shrinks its font, so keep it short.
+        label:
+          type: string
+          maxLength: 120
+          description: Short descriptor underneath, e.g. "INCREASED SCHEDULED APPOINTMENTS".
+
+    OnePagerStatV1:
+      type: object
+      additionalProperties: false
+      description: One impact stat in the One Page Generator body.
+      required: [ value, description ]
+      properties:
+        value:
+          type: string
+          maxLength: 20
+          description: Large headline value, e.g. "+45%".
+        description:
+          type: string
+          maxLength: 120
+          description: Short descriptor underneath the value.
+
+    OnePagerCapabilityCardV1:
+      type: object
+      additionalProperties: false
+      description: One capability card in the One Page Generator body.
+      required: [ title, description, bullets, footer ]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Card heading.
+        description:
+          type: string
+          maxLength: 300
+          description: Short intro sentence under the heading.
+        bullets:
+          type: array
+          maxItems: 3
+          description: Up to 3 short checklist lines.
+          items:
+            type: string
+            maxLength: 120
+        footer:
+          type: string
+          maxLength: 200
+          description: Small subtext line at the bottom of the card.
+
+    OnePagerSpotlightCardV1:
+      type: object
+      additionalProperties: false
+      description: |
+        One spotlight card in the One Page Generator body. Unlike OnePagerCapabilityCardV1, the 3
+        slots this feeds are visually distinct (an image, a KPI-chip cluster, and 3 connected
+        stage-name pills), so each slot's decorative visual is cloned from the master as-is;
+        kpiChips and stageNames fill the two visuals that would otherwise show placeholder copy.
+      required: [ title, description, bullets, kpiChips, stageNames ]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Card heading.
+        description:
+          type: string
+          maxLength: 300
+          description: Short intro sentence under the heading.
+        bullets:
+          type: array
+          maxItems: 3
+          description: Up to 3 short checklist lines.
+          items:
+            type: string
+            maxLength: 120
+        kpiChips:
+          type: array
+          maxItems: 7
+          description: Up to 7 small value+label chips. Only meaningful for card index 1 (the KPI-chip cluster); empty for every other card.
+          items:
+            $ref: "#/components/schemas/OnePagerKpiV1"
+        stageNames:
+          type: array
+          maxItems: 3
+          description: Up to 3 short stage/step names. Only meaningful for card index 2 (the stage-name pills); empty for every other card.
+          items:
+            type: string
+            maxLength: 40
+
+    OnePagerInsightV1:
+      type: object
+      additionalProperties: false
+      description: One icon-and-insight card in the One Page Generator body.
+      required: [ title, insight ]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Short card title.
+        insight:
+          type: string
+          maxLength: 300
+          description: Short supporting insight sentence, shown under a static "KEY INSIGHT" label.
+
+    OnePagerMilestoneV1:
+      type: object
+      additionalProperties: false
+      description: One numbered step in the milestone banner.
+      required: [ title, subtext ]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Short step title.
+        subtext:
+          type: string
+          maxLength: 200
+          description: Short supporting subtext under the step title.
+
+    OnePagerDraftRequestV1:
+      type: object
+      additionalProperties: false
+      description: |
+        Guidance brief and the body modules picked in the module gallery, used to AI-draft a
+        One Page Generator page. Each module has one fixed canonical shape (5 tracker steps,
+        5 solution cards, 4 KPI tiles, 3 cards, ...), a known-good pre-sized layout, so drafted
+        text is capped to each field's character budget rather than risking overflow.
+      required: [ category, clientName, guidanceNotes, moduleOrder ]
+      properties:
+        category:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Market category or vertical the page targets, e.g. "Automotive".
+        clientName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Label used in the generated file's title.
+        guidanceNotes:
+          type: string
+          minLength: 1
+          maxLength: 20000
+          description: |
+            The brief: content architecture, exact copy, KPI values, disclaimers. This drafter
+            never researches or fact-checks on its own, so anything factual must be supplied here.
+        moduleOrder:
+          type: array
+          maxItems: 12
+          description: |
+            The body modules to draft, in stacking order top to bottom, as arranged by the user
+            in the picker's live outline. A module is included solely by its presence here;
+            SOLUTIONS_VISUAL is drafted only when SOLUTIONS is also present.
+          items:
+            $ref: "#/components/schemas/OnePagerModuleKeyV1"
+
+    OnePagerDraftV1:
+      type: object
+      additionalProperties: false
+      description: Complete drafted (or reviewed/edited) content for one One Page Generator page.
+      required: [ topicPill, mainTitle, supportingCopy, moduleOrder, processSteps, solutions, kpis,
+                  impactStats, capabilityCards, spotlightCards, insightCards, milestones ]
+      properties:
+        topicPill:
+          type: string
+          maxLength: 60
+          description: Short header pill label, e.g. "AUTOMOTIVE".
+        mainTitle:
+          type: array
+          minItems: 1
+          maxItems: 3
+          description: Header title, one string per line (up to 3 lines).
+          items:
+            type: string
+            maxLength: 120
+        supportingCopy:
+          type: string
+          maxLength: 200
+          description: Header supporting sentence.
+        moduleOrder:
+          type: array
+          maxItems: 12
+          description: |
+            The body modules' stacking order, top to bottom, every module actually in use. Editable
+            in the review step; the page is assembled in this exact order.
+          items:
+            $ref: "#/components/schemas/OnePagerModuleKeyV1"
+        processSectionLabel:
+          type: string
+          maxLength: 120
+          nullable: true
+          description: Small label above the process tracker, e.g. "HOW IT WORKS". Null when processSteps is empty.
+        processSteps:
+          type: array
+          maxItems: 5
+          description: Up to 5 short step words, e.g. "UNDERSTAND". Empty omits the process-tracker module.
+          items:
+            type: string
+            maxLength: 40
+        solutionsSectionLabel:
+          type: string
+          maxLength: 120
+          nullable: true
+          description: Section label above the core-solution cards. Null when solutions is empty.
+        solutions:
+          type: array
+          maxItems: 5
+          description: Up to 5 core-solution cards. Empty omits the solutions module.
+          items:
+            $ref: "#/components/schemas/OnePagerSolutionV1"
+        solutionsVisualLabel:
+          type: string
+          maxLength: 120
+          nullable: true
+          description: |
+            Section label for the optional companion visual beside the core-solution cards (two
+            stacked image placeholders in the master's right column). Null omits it; it renders
+            only alongside solutions, never as a stand-alone stacked section.
+        kpiSectionLabel:
+          type: string
+          maxLength: 120
+          nullable: true
+          description: Section label above the performance-signal tiles. Null when kpis is empty.
+        kpis:
+          type: array
+          maxItems: 4
+          description: Up to 4 performance-signal KPI tiles. Empty omits the performance-signals module.
+          items:
+            $ref: "#/components/schemas/OnePagerKpiV1"
+        kpiDisclaimer:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Small disclaimer under the KPI tiles. Null when kpis is empty.
+        imageTextSectionLabel:
+          type: string
+          maxLength: 120
+          nullable: true
+          description: Section title paired with the image-and-text block. Null when imageTextBody is null.
+        imageTextBody:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Paragraph copy for the image-and-text block. Null omits the module.
+        keyTakeaway:
+          type: string
+          maxLength: 400
+          nullable: true
+          description: Single callout sentence for the key-takeaway bar. Null omits the module.
+        impactStats:
+          type: array
+          maxItems: 3
+          description: 0 or 3 impact stats. Empty omits the module.
+          items:
+            $ref: "#/components/schemas/OnePagerStatV1"
+        capabilityCards:
+          type: array
+          maxItems: 3
+          description: 0 or 3 capability cards. Empty omits the module.
+          items:
+            $ref: "#/components/schemas/OnePagerCapabilityCardV1"
+        spotlightCards:
+          type: array
+          maxItems: 3
+          description: 0 or 3 spotlight cards. Empty omits the module.
+          items:
+            $ref: "#/components/schemas/OnePagerSpotlightCardV1"
+        insightCards:
+          type: array
+          maxItems: 3
+          description: 0 or 3 icon-and-insight cards. Empty omits the module.
+          items:
+            $ref: "#/components/schemas/OnePagerInsightV1"
+        milestoneHeadline:
+          type: string
+          maxLength: 200
+          nullable: true
+          description: Headline for the milestone banner. Null when milestones is empty.
+        milestones:
+          type: array
+          maxItems: 3
+          description: 0 or 3 numbered milestone-banner steps. Empty omits the module.
+          items:
+            $ref: "#/components/schemas/OnePagerMilestoneV1"
+
+    CreateOnePagerRequestV1:
+      type: object
+      additionalProperties: false
+      description: Reviewed content and shell choice used to assemble and save the One Page Generator page.
+      required: [ category, clientName, shellVariant, content ]
+      properties:
+        category:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Market category or vertical the page targets; part of the file title.
+        clientName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Label used in the generated file's title.
+        shellVariant:
+          description: Which header/footer shell to build onto, picked from the shell gallery.
+          allOf:
+            - $ref: "#/components/schemas/OnePagerShellVariantV1"
+        content:
+          description: The reviewed page content to assemble.
+          allOf:
+            - $ref: "#/components/schemas/OnePagerDraftV1"
+
+    OnePagerDeckV1:
+      type: object
+      additionalProperties: false
+      description: The One Page Generator page created in the user's Google Drive, recorded as a category-analysis row with template kind ONE_PAGER.
+      required: [ id, title, slidesUrl ]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Identifier of the category-analysis row that records the page; it appears in the category-analyses list with template kind ONE_PAGER.
+        title:
+          type: string
+          description: File name the page was saved under in Drive.
+        slidesUrl:
+          type: string
+          description: Edit URL of the new Google Slides file.
 
     RndDecisionV1:
       type: string

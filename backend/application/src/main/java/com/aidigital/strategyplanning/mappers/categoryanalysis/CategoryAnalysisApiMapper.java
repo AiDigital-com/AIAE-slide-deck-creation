@@ -3,15 +3,23 @@ package com.aidigital.strategyplanning.mappers.categoryanalysis;
 import com.aidigital.strategyplanning.api.v1.model.CategoryAnalysisSummaryV1;
 import com.aidigital.strategyplanning.api.v1.model.CategoryAnalysisV1;
 import com.aidigital.strategyplanning.api.v1.model.CreateCategoryAnalysisRequestV1;
+import com.aidigital.strategyplanning.api.v1.model.CreateInDepthDeckRequestV1;
 import com.aidigital.strategyplanning.api.v1.model.CreateStandardDeckRequestV1;
 import com.aidigital.strategyplanning.api.v1.model.GenerationStatusV1;
+import com.aidigital.strategyplanning.api.v1.model.InDepthDraftV1;
+import com.aidigital.strategyplanning.api.v1.model.InDepthFieldValueV1;
+import com.aidigital.strategyplanning.api.v1.model.InDepthSlideV1;
 import com.aidigital.strategyplanning.api.v1.model.StandardConnectionsV1;
 import com.aidigital.strategyplanning.api.v1.model.StandardDraftV1;
 import com.aidigital.strategyplanning.api.v1.model.StandardFieldValueV1;
 import com.aidigital.strategyplanning.config.ApplicationMapperConfig;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CategoryAnalysisRecord;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateCategoryAnalysisCommand;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateInDepthDeckCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateStandardDeckCommand;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthDraft;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthFieldValue;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthSlideSpec;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardConnections;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardDraft;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardFieldValue;
@@ -95,6 +103,40 @@ public interface CategoryAnalysisApiMapper {
 	 * @return service-layer field values
 	 */
 	List<StandardFieldValue> toFieldValues(List<StandardFieldValueV1> fields);
+
+	/**
+	 * Converts the In-Depth slide catalog to API DTOs.
+	 *
+	 * @param slides service-layer slide specs in deck order
+	 * @return API slide DTOs
+	 */
+	List<InDepthSlideV1> toInDepthSlideV1List(List<InDepthSlideSpec> slides);
+
+	/**
+	 * Converts a service In-Depth draft to the API DTO.
+	 *
+	 * @param draft service-layer drafted field set
+	 * @return API draft DTO
+	 */
+	InDepthDraftV1 toV1(InDepthDraft draft);
+
+	/**
+	 * Converts an API In-Depth deck request DTO to a service command.
+	 *
+	 * @param request   API create In-Depth deck request DTO
+	 * @param createdBy Clerk user ID of the creator
+	 * @return service command
+	 */
+	@Mapping(target = "createdBy", source = "createdBy")
+	CreateInDepthDeckCommand toCommand(CreateInDepthDeckRequestV1 request, String createdBy);
+
+	/**
+	 * Converts a list of API In-Depth field value DTOs to service-layer field values.
+	 *
+	 * @param fields API field value DTOs, may be null
+	 * @return service-layer field values
+	 */
+	List<InDepthFieldValue> toInDepthFieldValues(List<InDepthFieldValueV1> fields);
 
 	/**
 	 * Maps a string status code to the API enum.

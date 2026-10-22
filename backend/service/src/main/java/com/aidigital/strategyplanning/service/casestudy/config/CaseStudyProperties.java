@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app.case-study")
 public class CaseStudyProperties {
 
+	private static final String PRESENTATION_URL_PREFIX = "https://docs.google.com/presentation/d/";
+	private static final String PRESENTATION_URL_SUFFIX = "/edit";
+
 	/**
 	 * URL of the tokenized Google Slides template used for case study deck generation.
 	 * Engineering must wire Google OAuth to populate slide tokens from this template.
@@ -21,6 +24,19 @@ public class CaseStudyProperties {
 	 * Presentation ID of the tokenized Google Slides master template copied for each deck.
 	 */
 	private String templatePresentationId;
+
+	/**
+	 * Presentation ID of the tokenized One-Page Case Study template (an app-owned copy of the
+	 * design master, so the master itself is never edited).
+	 */
+	private String onePageTemplatePresentationId;
+
+	/**
+	 * Optional public base URL Google Slides fetches case study icons from. Blank means "the
+	 * address this request arrived on", which works once deployed; set it to the deployed app's
+	 * URL to swap icons while running on localhost (Google rejects localhost image URLs).
+	 */
+	private String publicAssetBaseUrl;
 
 	/**
 	 * Clerk secret key used to fetch the user's Google OAuth access token for Drive/Slides calls.
@@ -81,6 +97,51 @@ public class CaseStudyProperties {
 	 */
 	public void setTemplatePresentationId(String templatePresentationId) {
 		this.templatePresentationId = templatePresentationId;
+	}
+
+	/**
+	 * Returns the presentation ID of the tokenized One-Page Case Study template.
+	 *
+	 * @return presentation ID string
+	 */
+	public String getOnePageTemplatePresentationId() {
+		return onePageTemplatePresentationId;
+	}
+
+	/**
+	 * Sets the presentation ID of the tokenized One-Page Case Study template.
+	 *
+	 * @param onePageTemplatePresentationId the presentation ID to set
+	 */
+	public void setOnePageTemplatePresentationId(String onePageTemplatePresentationId) {
+		this.onePageTemplatePresentationId = onePageTemplatePresentationId;
+	}
+
+	/**
+	 * Returns the edit URL of the One-Page Case Study template, recorded on each saved row.
+	 *
+	 * @return template URL
+	 */
+	public String getOnePageTemplateUrl() {
+		return PRESENTATION_URL_PREFIX + onePageTemplatePresentationId + PRESENTATION_URL_SUFFIX;
+	}
+
+	/**
+	 * Returns the optional public base URL for case study icon images.
+	 *
+	 * @return base URL, blank when the request's own address is used
+	 */
+	public String getPublicAssetBaseUrl() {
+		return publicAssetBaseUrl;
+	}
+
+	/**
+	 * Sets the optional public base URL for case study icon images.
+	 *
+	 * @param publicAssetBaseUrl base URL to set
+	 */
+	public void setPublicAssetBaseUrl(String publicAssetBaseUrl) {
+		this.publicAssetBaseUrl = publicAssetBaseUrl;
 	}
 
 	/**

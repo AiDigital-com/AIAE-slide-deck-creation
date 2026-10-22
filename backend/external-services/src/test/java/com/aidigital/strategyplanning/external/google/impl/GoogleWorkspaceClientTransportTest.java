@@ -2,6 +2,7 @@ package com.aidigital.strategyplanning.external.google.impl;
 
 import com.aidigital.strategyplanning.external.common.http.PooledRestClientFactory;
 import com.aidigital.strategyplanning.external.google.GoogleApiException;
+import com.aidigital.strategyplanning.external.google.config.GoogleWorkspaceClientProperties;
 import com.aidigital.strategyplanning.external.google.model.GoogleApiFailure;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,7 +51,7 @@ class GoogleWorkspaceClientTransportTest {
 				eq(Duration.ofSeconds(60)))).thenReturn(restClient);
 		when(factory.createClient(eq("google-docs"), eq("https://docs.googleapis.com/v1"),
 				eq(Duration.ofSeconds(60)))).thenReturn(restClient);
-		return new GoogleWorkspaceClientImpl(factory, objectMapper);
+		return new GoogleWorkspaceClientImpl(factory, objectMapper, new GoogleWorkspaceClientProperties());
 	}
 
 	@Test
@@ -194,8 +195,8 @@ class GoogleWorkspaceClientTransportTest {
 			when(factory.createClient("google-slides", "https://slides.googleapis.com/v1",
 					Duration.ofSeconds(60)))
 					.thenReturn(RestClient.builder().baseUrl(server.url("/").toString()).build());
-			GoogleWorkspaceClientImpl client =
-					new GoogleWorkspaceClientImpl(factory, new ObjectMapper());
+			GoogleWorkspaceClientImpl client = new GoogleWorkspaceClientImpl(factory,
+					new ObjectMapper(), new GoogleWorkspaceClientProperties());
 
 			// When: the pooled client is resolved twice for the same base URL
 			RestClient first = client.client("https://slides.googleapis.com/v1", "google-slides");

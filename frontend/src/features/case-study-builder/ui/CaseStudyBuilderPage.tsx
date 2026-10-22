@@ -7,7 +7,8 @@ import { AppShell } from "../../../app/AppShell";
 import { apiClient } from "../../../shared/api/client";
 import { ErrorAlert } from "../../../shared/ui/ErrorAlert";
 import { LoadingBlock } from "../../../shared/ui/LoadingBlock";
-import { EMPTY_FORM, MAX_SOURCE_FILES } from "../constants/form";
+import { EMPTY_FORM, MAX_SOURCE_FILES, ACCEPTED_SOURCE_FILE_EXTENSIONS, SOURCE_FILE_KINDS_LABEL } from "../constants/form";
+import { CASE_STUDY_PICKER_ROUTE } from "../constants/templates";
 import type { FieldErrors, FormState } from "../model/types";
 import "./case-study-builder.css";
 
@@ -135,17 +136,17 @@ export function CaseStudyBuilderPage() {
     }
 
     return (
-        <AppShell appName="Strategy & Planning">
+        <AppShell appName="Strategy Toolkit">
             <div className="csb">
                 <div className="csb__nav">
-                    <button type="button" className="csb__back" onClick={() => navigate("/")}>
+                    <button type="button" className="csb__back" onClick={() => navigate(CASE_STUDY_PICKER_ROUTE)}>
                         ← Back
                     </button>
-                    <span className="csb__breadcrumb">Strategy / Documents</span>
+                    <span className="csb__breadcrumb">Strategy / Case Study / Three-Page</span>
                 </div>
 
-                <h1 className="csb__title">Case Study Builder</h1>
-                <p className="csb__subtitle">Generate case studies from templates.</p>
+                <h1 className="csb__title">Three-Page Case Study</h1>
+                <p className="csb__subtitle">Generate a three-slide case study from uploaded reports or manual entry.</p>
 
                 <div className="csb__layout">
                     <div className="csb__main">
@@ -156,7 +157,7 @@ export function CaseStudyBuilderPage() {
                                     <div>
                                         <span className="csb__auto-draft-title">Auto-Draft</span>
                                         <span className="csb__auto-draft-sub">
-                                            Upload up to {MAX_SOURCE_FILES} files (PDF, PowerPoint, Excel, CSV)
+                                            Upload up to {MAX_SOURCE_FILES} files ({SOURCE_FILE_KINDS_LABEL})
                                         </span>
                                     </div>
                                 </div>
@@ -165,7 +166,7 @@ export function CaseStudyBuilderPage() {
                                     <input
                                         type="file"
                                         multiple
-                                        accept=".pdf,.pptx,.ppt,.xlsx,.xls,.csv"
+                                        accept={ACCEPTED_SOURCE_FILE_EXTENSIONS}
                                         className="csb__file-input"
                                         onChange={handleFilesChosen}
                                     />

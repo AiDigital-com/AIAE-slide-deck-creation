@@ -4,7 +4,7 @@ import "./App.css";
 
 export default function App() {
     return (
-        <AppShell appName="Strategy & Planning">
+        <AppShell appName="Strategy Toolkit">
             <StrategyToolkit />
         </AppShell>
     );

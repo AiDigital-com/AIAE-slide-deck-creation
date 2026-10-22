@@ -11,9 +11,14 @@ import com.aidigital.strategyplanning.security.SecurityConfig;
 import com.aidigital.strategyplanning.security.SecurityProperties;
 import com.aidigital.strategyplanning.service.common.time.CurrentTimeImpl;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CategoryAnalysisRecord;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateInDepthDeckCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateStandardDeckCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.DraftAlignment;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.GoogleConnectionStatus;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthDraft;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthDraftField;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthFieldValue;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.InDepthSlideSpec;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardConnections;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardDraft;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardDraftField;
@@ -72,6 +77,10 @@ class CategoryAnalysesControllerTest {
 	private static final String DECKS_URL = "/api/v1/category-analyses/standard-decks";
 	private static final String SLIDE_REDRAFT_URL = "/api/v1/category-analyses/standard-drafts/slide";
 	private static final String ANALYSES_URL = "/api/v1/category-analyses";
+	private static final String IN_DEPTH_SLIDES_URL = "/api/v1/category-analyses/in-depth-slides";
+	private static final String IN_DEPTH_DRAFTS_URL = "/api/v1/category-analyses/in-depth-drafts";
+	private static final String IN_DEPTH_SLIDE_REDRAFT_URL = "/api/v1/category-analyses/in-depth-drafts/slide";
+	private static final String IN_DEPTH_DECKS_URL = "/api/v1/category-analyses/in-depth-decks";
 	private static final int FOCUS_NOTES_MAX_LENGTH = 10_000;
 
 	@Autowired
@@ -348,6 +357,162 @@ class CategoryAnalysesControllerTest {
 		// Then: it is rejected without reaching the service
 		response.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.errors[0].field").value("guidanceNotes"));
+		verifyNoInteractions(categoryAnalysisService);
+	}
+
+	// --- In-Depth template ---
+
+	@Test
+	void shouldRejectUnauthenticatedInDepthSlidesRequestTest() throws Exception {
+		// Given-When: the catalog is requested without a token
+		ResultActions response = mvc.perform(get(IN_DEPTH_SLIDES_URL));
+
+		// Then: it is refused
+		response.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void shouldListInDepthSlidesForAuthenticatedUserTest() throws Exception {
+		// Given: a two-slide catalog
+		when(categoryAnalysisService.listInDepthSlides()).thenReturn(List.of(
+				new InDepthSlideSpec(1, "Cover", true), new InDepthSlideSpec(2, "Market Trend", false)));
+
+		// When: the catalog is requested
+		ResultActions response = mvc.perform(get(IN_DEPTH_SLIDES_URL).with(validJwt()));
+
+		// Then: the mapper renders every slide in order
+		response.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].slideNumber").value(1))
+				.andExpect(jsonPath("$[0].title").value("Cover"))
+				.andExpect(jsonPath("$[0].defaultChecked").value(true))
+				.andExpect(jsonPath("$[1].slideNumber").value(2))
+				.andExpect(jsonPath("$[1].defaultChecked").value(false));
+	}
+
+	@Test
+	void shouldReturnInDepthDraftFieldsForAuthenticatedUserTest() throws Exception {
+		// Given: a one-field draft for the checked slides
+		InDepthDraft draft = new InDepthDraft(
+				List.of(new InDepthDraftField("highlights_headline", "Headline", List.of(3, 4), "GROWTH")),
+				new DraftAlignment("Premium beverage brand", true, true, "The deck fits Acme's business."));
+		when(categoryAnalysisService.draftInDepth("Beverages", "Acme", "focus on premium", "https://acme.com",
+				List.of(3, 4))).thenReturn(draft);
+
+		// When: the brief is posted
+		ResultActions response = mvc.perform(post(IN_DEPTH_DRAFTS_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"category\":\"Beverages\",\"clientName\":\"Acme\","
+						+ "\"clientWebsite\":\"https://acme.com\",\"guidanceNotes\":\"focus on premium\","
+						+ "\"selectedSlides\":[3,4]}"));
+
+		// Then: the field carries both slide numbers and the alignment verdict is rendered
+		response.andExpect(status().isOk())
+				.andExpect(jsonPath("$.fields[0].key").value("highlights_headline"))
+				.andExpect(jsonPath("$.fields[0].slideNumbers[0]").value(3))
+				.andExpect(jsonPath("$.fields[0].slideNumbers[1]").value(4))
+				.andExpect(jsonPath("$.fields[0].value").value("GROWTH"))
+				.andExpect(jsonPath("$.alignment.confirmed").value(true))
+				.andExpect(jsonPath("$.alignment.message").value("The deck fits Acme's business."));
+	}
+
+	@Test
+	void shouldPassCurrentFieldsIntoTheInDepthSlideRedraftTest() throws Exception {
+		// Given: a redraft of slide 2 with one current field
+		InDepthDraft draft = new InDepthDraft(
+				List.of(new InDepthDraftField("trend_headline", "Headline", List.of(2), "NEW")), null);
+		when(categoryAnalysisService.redraftInDepthSlide("Beverages", "Acme", null, 2, "punchier",
+				List.of(new InDepthFieldValue("trend_headline", "OLD")))).thenReturn(draft);
+
+		// When: the redraft is posted
+		ResultActions response = mvc.perform(post(IN_DEPTH_SLIDE_REDRAFT_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"category\":\"Beverages\",\"clientName\":\"Acme\",\"slideNumber\":2,"
+						+ "\"slideNote\":\"punchier\",\"currentFields\":[{\"key\":\"trend_headline\",\"value\":\"OLD\"}]}"));
+
+		// Then: the redrafted field is returned and no alignment is attached
+		response.andExpect(status().isOk())
+				.andExpect(jsonPath("$.fields[0].value").value("NEW"))
+				.andExpect(jsonPath("$.alignment").doesNotExist());
+	}
+
+	@Test
+	void shouldCreateInDepthDeckAndMapTheCheckedSlidesIntoTheCommandTest() throws Exception {
+		// Given: a deck record for the created deck
+		CategoryAnalysisRecord record = new CategoryAnalysisRecord(
+				7L, "Category Analysis — Beverages — Acme", "Beverages",
+				null, null, null, null, null, null,
+				"https://docs.google.com/presentation/d/deck_in_depth/edit", "IN_DEPTH", "SUBMITTED", "user_123",
+				LocalDateTime.of(2026, 7, 10, 12, 0));
+		when(categoryAnalysisService.createInDepthDeck(any(CreateInDepthDeckCommand.class), anyString()))
+				.thenReturn(record);
+
+		// When: the deck request is posted
+		ResultActions response = mvc.perform(post(IN_DEPTH_DECKS_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"category\":\"Beverages\",\"clientName\":\"Acme\",\"selectedSlides\":[1,8],"
+						+ "\"fields\":[{\"key\":\"drivers_headline\",\"value\":\"WHY NOW\"}]}"));
+
+		// Then: 201 with the deck URL, and the command carries the user, slides, and fields
+		response.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.id").value(7))
+				.andExpect(jsonPath("$.templateKind").value("IN_DEPTH"))
+				.andExpect(jsonPath("$.slidesUrl").value("https://docs.google.com/presentation/d/deck_in_depth/edit"));
+		ArgumentCaptor<CreateInDepthDeckCommand> captor = ArgumentCaptor.forClass(CreateInDepthDeckCommand.class);
+		ArgumentCaptor<String> baseUrl = ArgumentCaptor.forClass(String.class);
+		verify(categoryAnalysisService).createInDepthDeck(captor.capture(), baseUrl.capture());
+		assertThat(captor.getValue().createdBy()).isEqualTo("user_123");
+		assertThat(captor.getValue().selectedSlides()).containsExactly(1, 8);
+		assertThat(captor.getValue().fields()).containsExactly(new InDepthFieldValue("drivers_headline", "WHY NOW"));
+		assertThat(baseUrl.getValue()).isEqualTo("http://localhost");
+	}
+
+	@Test
+	void shouldRejectInDepthDraftWithoutAnyCheckedSlideAsBadRequestTest() throws Exception {
+		// Given: a brief violating the contract's minItems on selectedSlides
+		// When: it is posted
+		ResultActions response = mvc.perform(post(IN_DEPTH_DRAFTS_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"category\":\"Beverages\",\"clientName\":\"Acme\","
+						+ "\"clientWebsite\":\"https://acme.com\",\"selectedSlides\":[]}"));
+
+		// Then: the request is rejected without reaching the service
+		response.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.errors[0].field").value("selectedSlides"));
+		verifyNoInteractions(categoryAnalysisService);
+	}
+
+	@Test
+	void shouldRejectInDepthSlideRedraftBeyondTheCatalogAsBadRequestTest() throws Exception {
+		// Given: a slide number past the contract's maximum of 24
+		// When: the redraft endpoint is called
+		ResultActions response = mvc.perform(post(IN_DEPTH_SLIDE_REDRAFT_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"category\":\"Beverages\",\"clientName\":\"Acme\","
+						+ "\"slideNumber\":25,\"currentFields\":[]}"));
+
+		// Then: the request is rejected without reaching the service
+		response.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.errors[0].field").value("slideNumber"));
+		verifyNoInteractions(categoryAnalysisService);
+	}
+
+	@Test
+	void shouldRejectInDepthDeckWithASlideNumberOutsideTheCatalogAsBadRequestTest() throws Exception {
+		// Given: a checked slide number below the contract's minimum of 1
+		// When: the deck endpoint is called
+		ResultActions response = mvc.perform(post(IN_DEPTH_DECKS_URL)
+				.with(validJwt())
+				.contentType(APPLICATION_JSON)
+				.content("{\"category\":\"Beverages\",\"clientName\":\"Acme\",\"selectedSlides\":[0],"
+						+ "\"fields\":[]}"));
+
+		// Then: the request is rejected without reaching the service
+		response.andExpect(status().isBadRequest());
 		verifyNoInteractions(categoryAnalysisService);
 	}
 }

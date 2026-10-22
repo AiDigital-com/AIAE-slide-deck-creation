@@ -17,6 +17,7 @@ import {
     REDRAFT_FALLBACK_ERROR,
     SLIDE_TITLES,
 } from "../constants/brief";
+import { CATEGORY_ANALYSIS_PICKER_ROUTE } from "../constants/templates";
 import type {
     BriefFieldErrors,
     BriefState,
@@ -26,6 +27,7 @@ import type {
     Step,
 } from "../model/types";
 import { mergeSlideRedraft } from "./redraftMerge";
+import { selectStandardAnalyses } from "../model/recentAnalyses";
 import "./category-analysis-builder.css";
 
 /**
@@ -116,6 +118,7 @@ export function CategoryAnalysisBuilderPage() {
             if (error) throw new Error("Failed to load recent analyses");
             return data;
         },
+        select: selectStandardAnalyses,
     });
 
     const draftMutation = useMutation({
@@ -263,13 +266,17 @@ export function CategoryAnalysisBuilderPage() {
     const slideNumbers = [...new Set(fields.map((f) => f.slideNumber))].sort((a, b) => a - b);
 
     return (
-        <AppShell appName="Strategy & Planning">
+        <AppShell appName="Strategy Toolkit">
             <div className="cab">
                 <div className="cab__nav">
-                    <button type="button" className="cab__back" onClick={() => navigate("/")}>
+                    <button
+                        type="button"
+                        className="cab__back"
+                        onClick={() => navigate(CATEGORY_ANALYSIS_PICKER_ROUTE)}
+                    >
                         ← Back
                     </button>
-                    <span className="cab__breadcrumb">Strategy / Category Analysis</span>
+                    <span className="cab__breadcrumb">Strategy / Category Analysis / Standard</span>
                 </div>
 
                 <h1 className="cab__title">Category Analysis Builder</h1>

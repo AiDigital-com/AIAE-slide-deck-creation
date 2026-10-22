@@ -47,6 +47,8 @@ class OpenAiSourceLinkServiceImplTest {
 		sources.put("trends_sources", "Source: KFF, 2025");
 		sources.put("drivers_sources", "Source: Mintel");
 		JsonNode body = objectMapper.readTree(service.buildRequestBody(sources));
+		assertThat(body.has("temperature")).isFalse();
+		assertThat(body.has("max_tokens")).isFalse();
 
 		assertThat(body.path("model").asText()).isEqualTo("gpt-4o");
 		assertThat(body.path("response_format").path("type").asText()).isEqualTo("json_object");

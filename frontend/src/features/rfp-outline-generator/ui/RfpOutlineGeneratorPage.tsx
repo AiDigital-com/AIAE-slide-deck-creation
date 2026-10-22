@@ -160,7 +160,7 @@ export function RfpOutlineGeneratorPage() {
     }
 
     return (
-        <AppShell appName="Strategy & Planning">
+        <AppShell appName="Strategy Toolkit">
             <div className="rog">
                 <div className="rog__nav">
                     <button type="button" className="rog__back" onClick={() => navigate("/")}>

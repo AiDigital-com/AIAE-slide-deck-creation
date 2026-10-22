@@ -34,7 +34,7 @@ public class OpenAiRfpOutlineDraftServiceImpl implements RfpOutlineDraftService 
 
 	/**
 	 * Long by design: a fully detailed deckOutline is a large completion (up to
-	 * {@code max_tokens=8000}) and can take a while to generate.
+	 * {@code max_completion_tokens=8000}) and can take a while to generate.
 	 */
 	private static final Duration CHAT_TIMEOUT = Duration.ofSeconds(240);
 
@@ -119,6 +119,8 @@ public class OpenAiRfpOutlineDraftServiceImpl implements RfpOutlineDraftService 
 					"AI drafting call failed with HTTP " + failure.getStatusCode());
 			case EMPTY_CONTENT -> new AppException(ErrorReason.C003,
 					"AI drafting call returned no content");
+			case INCOMPLETE -> new AppException(ErrorReason.C003,
+					"AI drafting response was cut off before finishing — try a shorter brief");
 			case INTERRUPTED -> new AppException(ErrorReason.C003, failure,
 					"AI drafting call interrupted");
 			case TRANSPORT -> new AppException(ErrorReason.C003, failure,

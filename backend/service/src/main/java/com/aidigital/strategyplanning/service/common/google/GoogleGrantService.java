@@ -31,4 +31,17 @@ public interface GoogleGrantService {
 	 * @return true when every required scope is present
 	 */
 	boolean hasScopes(List<String> grantedScopes, Set<GoogleOAuthScope> requiredScopes);
+
+	/**
+	 * Resolves the caller's Google access token for a feature that writes into their Drive,
+	 * rejecting a user who is not signed in with Google or whose grant lacks a required scope.
+	 *
+	 * @param clerkSecretKey Clerk secret key of the calling feature
+	 * @param userId         Clerk user id
+	 * @param requiredScopes scopes the calling feature needs
+	 * @return the user's Google OAuth access token
+	 * @throws com.aidigital.strategyplanning.service.common.error.AppException with C003 reason when the user has
+	 * not connected Google or the grant is missing a required scope
+	 */
+	String requireAccessToken(String clerkSecretKey, String userId, Set<GoogleOAuthScope> requiredScopes);
 }

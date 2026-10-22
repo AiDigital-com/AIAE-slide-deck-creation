@@ -46,6 +46,29 @@ class OpenAiChatClientImplTest {
 	}
 
 	@Test
+	void shouldReportAnIncompleteCompletionWhenItWasCutOffAtTheTokenLimitTest() {
+		// Given: a completion the provider stopped at max_tokens, content and all
+		String body = "{\"choices\":[{\"finish_reason\":\"length\","
+				+ "\"message\":{\"content\":\"{\\\"half\"}}]}";
+
+		// When-Then: the truncated text is withheld under its own reason, so the caller can say
+		// "ask for less" instead of failing on a JSON parse
+		assertThatThrownBy(() -> client().contentOrFail(body))
+				.isInstanceOf(OpenAiExternalException.class)
+				.extracting(e -> ((OpenAiExternalException) e).getFailure())
+				.isEqualTo(OpenAiFailure.INCOMPLETE);
+	}
+
+	@Test
+	void shouldReturnContentWhenTheCompletionStoppedNormallyTest() {
+		// Given: a completion that finished on its own, with a multimodal-shaped request behind it
+		String body = "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"ok\"}}]}";
+
+		// When-Then: an ordinary stop is not treated as truncation
+		assertThat(client().contentOrFail(body)).isEqualTo("ok");
+	}
+
+	@Test
 	void shouldReportATransportFailureWhenTheBodyIsNotJsonTest() {
 		// Given: a body the provider never intended as JSON
 		// When-Then: it is a transport failure, so callers do not report "no content"

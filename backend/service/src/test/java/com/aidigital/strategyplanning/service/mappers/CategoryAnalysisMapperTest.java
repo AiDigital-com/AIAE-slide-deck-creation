@@ -4,6 +4,7 @@ import com.aidigital.strategyplanning.domain.categoryanalysis.entities.CategoryA
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CategoryAnalysisRecord;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateCategoryAnalysisCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateStandardDeckCommand;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.RecordOnePagerCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.StandardFieldValue;
 import com.aidigital.strategyplanning.service.mappers.categoryanalysis.CategoryAnalysisMapper;
 import org.junit.jupiter.api.Test;
@@ -173,5 +174,33 @@ class CategoryAnalysisMapperTest {
 		assertThat(standard.getSlidesUrl()).isEqualTo("deck");
 		assertThat(standard.getTemplateKind()).isEqualTo("STANDARD");
 		assertThat(standard.getCategory()).isNull();
+	}
+
+	@Test
+	void shouldKeepOnlyTheListColumnsForARecordedOnePagerTest() {
+		// Given: a One Page Generator page already saved in Drive
+		CategoryAnalysisMapper mapper = Mappers.getMapper(CategoryAnalysisMapper.class);
+		RecordOnePagerCommand command = new RecordOnePagerCommand("One Page Generator — Pet Care — Acme",
+				"Pet Care", "https://docs.google.com/presentation/d/page_1/edit", "user_1");
+
+		// When: it is mapped to a row
+		CategoryAnalysisEntity entity = mapper.toOnePagerEntity(command, "ONE_PAGER", "SUBMITTED", CREATED_AT);
+
+		// Then: title, category, link, kind, and creator are kept; every narrative column is empty
+		assertThat(entity.getId()).isNull();
+		assertThat(entity.getTitle()).isEqualTo("One Page Generator — Pet Care — Acme");
+		assertThat(entity.getCategory()).isEqualTo("Pet Care");
+		assertThat(entity.getSlidesUrl()).isEqualTo("https://docs.google.com/presentation/d/page_1/edit");
+		assertThat(entity.getTemplateKind()).isEqualTo("ONE_PAGER");
+		assertThat(entity.getStatus()).isEqualTo("SUBMITTED");
+		assertThat(entity.getCreatedBy()).isEqualTo("user_1");
+		assertThat(entity.getCreatedAt()).isEqualTo(CREATED_AT);
+		assertThat(entity.getMarketOverview()).isNull();
+		assertThat(entity.getKeyPlayers()).isNull();
+		assertThat(entity.getTrends()).isNull();
+		assertThat(entity.getOpportunities()).isNull();
+		assertThat(entity.getRecommendations()).isNull();
+		assertThat(entity.getSourceFileNames()).isNull();
+		assertThat(mapper.toOnePagerEntity(null, null, null, null)).isNull();
 	}
 }

@@ -3,6 +3,7 @@ package com.aidigital.strategyplanning.service.mappers;
 import com.aidigital.strategyplanning.domain.casestudy.entities.CaseStudyEntity;
 import com.aidigital.strategyplanning.service.casestudy.models.CaseStudyRecord;
 import com.aidigital.strategyplanning.service.casestudy.models.CreateCaseStudyCommand;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageCaseStudySummary;
 import com.aidigital.strategyplanning.service.mappers.casestudy.CaseStudyMapper;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -149,6 +150,38 @@ class CaseStudyMapperTest {
 		assertThat(entity.getTemplateUrl()).isEqualTo("template");
 		assertThat(entity.getSlidesUrl()).isEqualTo("deck");
 		assertThat(entity.getStatus()).isEqualTo("GENERATED");
+		assertThat(entity.getCreatedAt()).isEqualTo(CREATED_AT);
+	}
+
+	@Test
+	void shouldBuildAOnePageEntityFromTheSummaryWithoutATestimonialTest() {
+		// Given: a one-page summary with a distinct value in every field
+		CaseStudyMapper mapper = Mappers.getMapper(CaseStudyMapper.class);
+		OnePageCaseStudySummary summary = new OnePageCaseStudySummary("SCALING CONVERSIONS", "A retailer",
+				"RETAIL", "CPA rose.", "Reallocated budget.", "Conversions grew.", "-68%, +32%",
+				"April – August 2026");
+
+		// When: the entity is built
+		CaseStudyEntity entity = mapper.toOnePageEntity(summary, "report.pdf",
+				"https://docs.google.com/presentation/d/one_page/edit",
+				"https://docs.google.com/presentation/d/deck_1/edit", "GENERATED", "user_1", CREATED_AT);
+
+		// Then: every column is filled from its source and the id is left for the database
+		assertThat(entity.getId()).isNull();
+		assertThat(entity.getTitle()).isEqualTo("SCALING CONVERSIONS");
+		assertThat(entity.getClientName()).isEqualTo("A retailer");
+		assertThat(entity.getIndustry()).isEqualTo("RETAIL");
+		assertThat(entity.getChallenge()).isEqualTo("CPA rose.");
+		assertThat(entity.getSolution()).isEqualTo("Reallocated budget.");
+		assertThat(entity.getResults()).isEqualTo("Conversions grew.");
+		assertThat(entity.getKeyMetrics()).isEqualTo("-68%, +32%");
+		assertThat(entity.getTimeline()).isEqualTo("April – August 2026");
+		assertThat(entity.getTestimonial()).isNull();
+		assertThat(entity.getSourceFileName()).isEqualTo("report.pdf");
+		assertThat(entity.getTemplateUrl()).isEqualTo("https://docs.google.com/presentation/d/one_page/edit");
+		assertThat(entity.getSlidesUrl()).isEqualTo("https://docs.google.com/presentation/d/deck_1/edit");
+		assertThat(entity.getStatus()).isEqualTo("GENERATED");
+		assertThat(entity.getCreatedBy()).isEqualTo("user_1");
 		assertThat(entity.getCreatedAt()).isEqualTo(CREATED_AT);
 	}
 }

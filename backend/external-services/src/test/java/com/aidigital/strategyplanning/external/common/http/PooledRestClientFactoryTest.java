@@ -2,6 +2,8 @@ package com.aidigital.strategyplanning.external.common.http;
 
 import com.aidigital.strategyplanning.external.common.http.config.PooledHttpClientProperties;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
@@ -134,5 +136,49 @@ class PooledRestClientFactoryTest {
 
         // When-Then: shutdown is still safe
         assertThatCode(factory::destroy).doesNotThrowAnyException();
+    }
+
+    @Test
+    void shouldSendASingleAttemptClientRequestOnceOnServiceUnavailableTest() throws Exception {
+        // Given: a server answering 503 and then 200, and a single-attempt client
+        try (MockWebServer server = new MockWebServer()) {
+            server.start();
+            server.enqueue(new MockResponse().setResponseCode(503));
+            server.enqueue(new MockResponse().setResponseCode(200));
+            PooledRestClientFactory factory = factory(defaultProperties());
+            RestClient client = factory.createSingleAttemptClient(
+                "once", server.url("/").toString(), Duration.ofSeconds(5));
+
+            // When: a POST meets the 503
+            int status = client.post().uri("/files").retrieve()
+                .onStatus(code -> true, (request, response) -> { })
+                .toBodilessEntity().getStatusCode().value();
+
+            // Then: the 503 is returned as is and Apache did not resend the request
+            assertThat(status).isEqualTo(503);
+            assertThat(server.getRequestCount()).isEqualTo(1);
+            factory.destroy();
+        }
+    }
+
+    @Test
+    void shouldLetADefaultClientRetryServiceUnavailableOnceTest() throws Exception {
+        // Given: a server answering 503 and then 200, and a default client
+        try (MockWebServer server = new MockWebServer()) {
+            server.start();
+            server.enqueue(new MockResponse().setResponseCode(503));
+            server.enqueue(new MockResponse().setResponseCode(200));
+            PooledRestClientFactory factory = factory(defaultProperties());
+            RestClient client = factory.createClient("default", server.url("/").toString());
+
+            // When: a POST meets the 503
+            int status = client.post().uri("/files").retrieve()
+                .toBodilessEntity().getStatusCode().value();
+
+            // Then: Apache's built-in retry resent it and the second answer won
+            assertThat(status).isEqualTo(200);
+            assertThat(server.getRequestCount()).isEqualTo(2);
+            factory.destroy();
+        }
     }
 }

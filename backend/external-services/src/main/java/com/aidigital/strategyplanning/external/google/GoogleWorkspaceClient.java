@@ -54,4 +54,37 @@ public interface GoogleWorkspaceClient {
 	 * @throws GoogleApiException when the call fails or the API answers non-2xx
 	 */
 	JsonNode batchUpdateDocument(String accessToken, String documentId, String requestsJson);
+
+	/**
+	 * Exports a Google-native Drive file in another format, for example a Slides presentation as
+	 * a PPTX. The source file is only read, never changed.
+	 *
+	 * @param accessToken user's Google OAuth access token
+	 * @param fileId      file to export
+	 * @param mimeType    export format, for example
+	 *                    {@code application/vnd.openxmlformats-officedocument.presentationml.presentation}
+	 * @return the exported file's bytes, never empty
+	 * @throws GoogleApiException when the call fails, the API answers non-2xx after the transient
+	 *                            retries, or the export is empty
+	 */
+	byte[] exportDriveFile(String accessToken, String fileId, String mimeType);
+
+	/**
+	 * Uploads a file to Drive as a new file, asking Drive to convert it to a Google-native type —
+	 * typically a PPTX uploaded as a Google Slides presentation.
+	 *
+	 * @param accessToken    user's Google OAuth access token
+	 * @param name           name for the new file
+	 * @param targetMimeType Drive type to create, for example
+	 *                       {@code application/vnd.google-apps.presentation}
+	 * @param content        bytes to upload
+	 * @param sourceMimeType type of the uploaded bytes, for example
+	 *                       {@code application/vnd.openxmlformats-officedocument.presentationml.presentation}
+	 * @return the created file as Drive returns it, always carrying an {@code id}
+	 * @throws GoogleApiException when the call fails, the API answers non-2xx (the upload is sent
+	 *                            once and never resent, because it is not idempotent), or the
+	 *                            answer names no file id
+	 */
+	JsonNode uploadDriveFile(String accessToken, String name, String targetMimeType, byte[] content,
+			String sourceMimeType);
 }

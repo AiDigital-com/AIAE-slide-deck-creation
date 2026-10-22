@@ -177,6 +177,19 @@ class OpenAiRfpOutlineDraftServiceImplTest {
 	}
 
 	@Test
+	void shouldTellTheUserToShortenTheBriefWhenTheCompletionWasCutOffTest() {
+		// Given: the provider stopped the completion at the token limit
+		OpenAiRfpOutlineDraftServiceImpl service = serviceFailingWith(
+				new OpenAiExternalException(OpenAiFailure.INCOMPLETE, 200, "cut off"));
+
+		// When-Then: the message asks for less input rather than reporting a parse error
+		assertThatThrownBy(() -> service.callChatCompletion(REQUEST_BODY))
+				.isInstanceOf(AppException.class)
+				.hasMessageContaining(ErrorReason.C003.getCode())
+				.hasMessageContaining("cut off before finishing");
+	}
+
+	@Test
 	void shouldPreserveTheInterruptedCauseForTheLogTest() {
 		// Given: the waiting thread was interrupted
 		OpenAiExternalException failure = new OpenAiExternalException(

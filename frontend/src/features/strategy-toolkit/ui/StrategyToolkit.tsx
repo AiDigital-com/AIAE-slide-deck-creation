@@ -1,19 +1,30 @@
 import { useNavigate } from "react-router-dom";
 
-import { TOOLS } from "../constants/tools";
+import { COMING_SOON_TOOL_ICON, TOOLS } from "../constants/tools";
 import "./strategy-toolkit.css";
 
-/** Strategy Toolkit home page — tool card grid. */
+/** Strategy Toolkit home page — brand hero band over the tool card grid. */
 export function StrategyToolkit() {
     const navigate = useNavigate();
 
     return (
         <div className="strategy-toolkit">
-            <div className="strategy-toolkit__header">
-                <h1 className="strategy-toolkit__title">Strategy Toolkit</h1>
-                <p className="strategy-toolkit__subtitle">
-                    Internal tools for creating client deliverables. Select a tool to begin your workflow.
-                </p>
+            <div className="strategy-toolkit__hero">
+                <svg
+                    className="strategy-toolkit__wave"
+                    viewBox="0 0 1200 120"
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                >
+                    <path d="M0 96 C 180 -10, 360 -10, 540 60 S 900 130, 1200 20" />
+                </svg>
+                <div className="strategy-toolkit__header">
+                    <span className="strategy-toolkit__kicker">AI Digital · Strategy</span>
+                    <h1 className="strategy-toolkit__title">Strategy Toolkit</h1>
+                    <p className="strategy-toolkit__subtitle">
+                        Internal tools for creating client deliverables. Select a tool to begin your workflow.
+                    </p>
+                </div>
             </div>
 
             <div className="strategy-toolkit__grid">
@@ -22,9 +33,7 @@ export function StrategyToolkit() {
                     const cardContent = (
                         <>
                             <div className={`tool-card__icon-wrap${tool.available ? "" : " tool-card__icon-wrap--muted"}`}>
-                                <span className="tool-card__icon" role="img" aria-label={tool.title}>
-                                    {tool.icon}
-                                </span>
+                                <img className="tool-card__icon" src={tool.icon} alt="" />
                             </div>
                             <h2 className={`tool-card__title${tool.available ? "" : " tool-card__title--muted"}`}>
                                 {tool.title}
@@ -80,10 +89,11 @@ export function StrategyToolkit() {
 
                 <div className="tool-card tool-card--coming-soon">
                     <div className="tool-card__icon-wrap tool-card__icon-wrap--muted">
-                        <span className="tool-card__icon tool-card__icon--plus" aria-hidden="true">+</span>
+                        <img className="tool-card__icon" src={COMING_SOON_TOOL_ICON} alt="" />
                     </div>
-                    <h2 className="tool-card__title tool-card__title--muted">More Tools</h2>
-                    <p className="tool-card__description">Coming soon to the suite.</p>
+                    <h2 className="tool-card__title tool-card__title--muted">More tools coming</h2>
+                    <p className="tool-card__description">New strategy tools appear here as they ship.</p>
+                    <span className="tool-card__link tool-card__link--disabled">Coming soon</span>
                 </div>
             </div>
         </div>

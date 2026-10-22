@@ -2,7 +2,8 @@ package com.aidigital.strategyplanning.service.common.files;
 
 /**
  * Service contract for extracting readable text from uploaded source documents. Supports PDF,
- * Word (DOCX/DOC), PowerPoint (PPTX/PPT), Excel (XLSX/XLS), and CSV/TXT files. Excel workbooks
+ * Word (DOCX/DOC), PowerPoint (PPTX/PPT), Excel (XLSX/XLS), and CSV/TXT/Markdown files. Images are
+ * not extracted as text; see {@link SourceImageService}. Excel workbooks
  * are rendered sheet by sheet as delimited rows so tabular data survives extraction. Shared
  * across features that accept source-document uploads (Case Study Builder, RFP Outline Generator).
  */

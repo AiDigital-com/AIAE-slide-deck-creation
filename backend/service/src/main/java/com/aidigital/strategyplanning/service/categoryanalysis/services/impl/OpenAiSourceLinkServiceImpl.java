@@ -91,7 +91,6 @@ public class OpenAiSourceLinkServiceImpl implements SourceLinkService {
 		payload.put("model", properties.getOpenaiModel());
 		payload.set("messages", objectMapper.createArrayNode().add(message));
 		payload.set("response_format", responseFormat);
-		payload.put("temperature", 0.2);
 		return payload.toString();
 	}
 
@@ -127,6 +126,8 @@ public class OpenAiSourceLinkServiceImpl implements SourceLinkService {
 					"Source link call failed with HTTP " + failure.getStatusCode());
 			case EMPTY_CONTENT -> new AppException(ErrorReason.C003,
 					"Source link call returned no content");
+			case INCOMPLETE -> new AppException(ErrorReason.C003,
+					"Source link call was cut off before finishing");
 			case INTERRUPTED -> new AppException(ErrorReason.C003, failure,
 					"Source link call interrupted");
 			case TRANSPORT -> new AppException(ErrorReason.C003, failure,

@@ -14,6 +14,7 @@ import com.aidigital.strategyplanning.service.casestudy.templates.CaseStudyTempl
 import com.aidigital.strategyplanning.service.common.error.AppException;
 import com.aidigital.strategyplanning.service.common.error.ErrorReason;
 import com.aidigital.strategyplanning.service.common.files.SourceDocument;
+import com.aidigital.strategyplanning.service.common.files.SourceImage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,11 +27,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * OpenAI-backed implementation of {@link CaseStudyDraftService}. Sends the extracted text of all
- * uploaded source documents to the chat completions API with a JSON-object response format so one
- * call drafts every case study form field.
+ * uploaded source documents, plus any uploaded screenshots as inline images, to the chat
+ * completions API with a JSON-object response format so one call drafts every case study form
+ * field.
  */
 @Service
 @RequiredArgsConstructor
@@ -51,14 +54,15 @@ public class OpenAiCaseStudyDraftServiceImpl implements CaseStudyDraftService {
 	}
 
 	@Override
-	public CaseStudyDraft draft(List<SourceDocument> documents) {
+	public CaseStudyDraft draft(List<SourceDocument> documents, List<SourceImage> images) {
 		if (!isConnected()) {
 			throw new AppException(ErrorReason.C003,
 					"AI drafting engine is not connected — add OPENAI_API_KEY to enable drafting");
 		}
-		String content = callChatCompletion(promptComposer.buildRequestBody(documents));
-		String sourceFileNames = documents.stream()
-				.map(SourceDocument::fileName)
+		String content = callChatCompletion(promptComposer.buildRequestBody(documents, images));
+		String sourceFileNames = Stream.concat(
+						documents.stream().map(SourceDocument::fileName),
+						images.stream().map(SourceImage::fileName))
 				.collect(Collectors.joining(", "));
 		return draftParser.parseDraft(content, sourceFileNames);
 	}
@@ -114,6 +118,8 @@ public class OpenAiCaseStudyDraftServiceImpl implements CaseStudyDraftService {
 					"AI drafting call failed with HTTP " + failure.getStatusCode());
 			case EMPTY_CONTENT -> new AppException(ErrorReason.C003,
 					"AI drafting call returned no content");
+			case INCOMPLETE -> new AppException(ErrorReason.C003,
+					"AI drafting response was cut off before finishing — try fewer or shorter source files");
 			case INTERRUPTED -> new AppException(ErrorReason.C003, failure,
 					"AI drafting call interrupted");
 			case TRANSPORT -> new AppException(ErrorReason.C003, failure,

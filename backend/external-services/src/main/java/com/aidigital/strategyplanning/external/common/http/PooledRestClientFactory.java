@@ -7,6 +7,7 @@ import jakarta.annotation.PreDestroy;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.apache.hc.core5.util.TimeValue;
@@ -65,7 +66,25 @@ public class PooledRestClientFactory {
      */
     public synchronized RestClient createClient(String name, String baseUrl,
                                                 Duration responseTimeout) {
-        return buildClient(name, baseUrl, responseTimeout);
+        return buildClient(name, baseUrl, responseTimeout, true);
+    }
+
+    /**
+     * Creates a {@link RestClient} that never resends a request on its own.
+     *
+     * <p>Apache HttpClient 5 retries a {@code 503} (and {@code 429}) once by default, whatever the
+     * method. For a non-idempotent {@code POST} that can create the resource twice when the
+     * server committed before answering, so such callers use this client and decide any resend
+     * themselves.
+     *
+     * @param name            logical service name (used for diagnostics only)
+     * @param baseUrl         base URL for all requests made by this client
+     * @param responseTimeout maximum wait for the first response byte for this client
+     * @return a fully configured {@code RestClient} with automatic retries disabled
+     */
+    public synchronized RestClient createSingleAttemptClient(String name, String baseUrl,
+                                                             Duration responseTimeout) {
+        return buildClient(name, baseUrl, responseTimeout, false);
     }
 
     /**
@@ -82,7 +101,7 @@ public class PooledRestClientFactory {
      * @return a fully configured {@code RestClient} that requires absolute request URIs
      */
     public synchronized RestClient createAbsoluteUrlClient(String name, Duration responseTimeout) {
-        return buildClient(name, null, responseTimeout);
+        return buildClient(name, null, responseTimeout, true);
     }
 
     /**
@@ -91,9 +110,11 @@ public class PooledRestClientFactory {
      * @param name            logical service name (used for diagnostics only)
      * @param baseUrl         base URL for all requests, or null when callers pass absolute URIs
      * @param responseTimeout maximum wait for the first response byte for this client
+     * @param autoRetry       whether Apache HttpClient's default automatic retries stay enabled
      * @return a fully configured {@code RestClient}
      */
-    RestClient buildClient(String name, String baseUrl, Duration responseTimeout) {
+    RestClient buildClient(String name, String baseUrl, Duration responseTimeout,
+                           boolean autoRetry) {
         PoolingHttpClientConnectionManager connectionManager = buildConnectionManager();
 
         RequestConfig requestConfig = RequestConfig.custom()
@@ -103,12 +124,15 @@ public class PooledRestClientFactory {
                 properties.getConnectionRequestTimeout().toMillis()))
             .build();
 
-        CloseableHttpClient httpClient = HttpClients.custom()
+        HttpClientBuilder clientBuilder = HttpClients.custom()
             .setConnectionManager(connectionManager)
             .setDefaultRequestConfig(requestConfig)
             .evictIdleConnections(TimeValue.ofMilliseconds(
-                properties.getIdleEvictionDuration().toMillis()))
-            .build();
+                properties.getIdleEvictionDuration().toMillis()));
+        if (!autoRetry) {
+            clientBuilder.disableAutomaticRetries();
+        }
+        CloseableHttpClient httpClient = clientBuilder.build();
 
         HttpComponentsClientHttpRequestFactory requestFactory =
             new HttpComponentsClientHttpRequestFactory(httpClient);

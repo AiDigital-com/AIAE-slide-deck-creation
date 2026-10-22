@@ -89,7 +89,7 @@ export function RndRequestTriagePage() {
     const escalated = result?.decision === "ESCALATE_TO_RND";
 
     return (
-        <AppShell appName="Strategy & Planning">
+        <AppShell appName="Strategy Toolkit">
             <div className="rrt">
                 <div className="rrt__nav">
                     <button type="button" className="rrt__back" onClick={() => navigate("/")}>

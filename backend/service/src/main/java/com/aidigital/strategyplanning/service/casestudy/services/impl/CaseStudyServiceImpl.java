@@ -5,9 +5,13 @@ import com.aidigital.strategyplanning.domain.casestudy.repositories.CaseStudyRep
 import com.aidigital.strategyplanning.service.casestudy.config.CaseStudyProperties;
 import com.aidigital.strategyplanning.service.casestudy.models.CaseStudyRecord;
 import com.aidigital.strategyplanning.service.casestudy.models.CreateCaseStudyCommand;
+import com.aidigital.strategyplanning.service.casestudy.models.CreateOnePageCaseStudyCommand;
+import com.aidigital.strategyplanning.service.casestudy.models.OnePageCaseStudySummary;
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyDeckService;
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyDraftService;
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyService;
+import com.aidigital.strategyplanning.service.casestudy.services.OnePageCaseStudyContentAssembler;
+import com.aidigital.strategyplanning.service.casestudy.services.OnePageCaseStudyDeckService;
 import com.aidigital.strategyplanning.service.common.error.AppException;
 import com.aidigital.strategyplanning.service.common.error.ErrorReason;
 import com.aidigital.strategyplanning.service.common.time.CurrentTime;
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Default implementation of {@link CaseStudyService}.
@@ -27,12 +32,15 @@ import java.util.List;
 public class CaseStudyServiceImpl implements CaseStudyService {
 
 	private static final String STATUS_GENERATED = "GENERATED";
+	private static final String ONE_PAGE_DECK_TITLE_PREFIX = "Case Study — ";
 
 	private final CaseStudyRepository caseStudyRepository;
 	private final CaseStudyMapper caseStudyMapper;
 	private final CaseStudyProperties caseStudyProperties;
 	private final CaseStudyDraftService caseStudyDraftService;
 	private final CaseStudyDeckService caseStudyDeckService;
+	private final OnePageCaseStudyDeckService onePageDeckService;
+	private final OnePageCaseStudyContentAssembler onePageContentAssembler;
 	private final CurrentTime currentTime;
 
 	@Override
@@ -48,6 +56,25 @@ public class CaseStudyServiceImpl implements CaseStudyService {
 				caseStudyProperties.getTemplateUrl(),
 				slidesUrl,
 				STATUS_GENERATED,
+				currentTime.nowLocalDateTime());
+		return caseStudyMapper.toRecord(caseStudyRepository.save(entity));
+	}
+
+	@Override
+	@LogUsage(action = "case-study.create-one-page")
+	public CaseStudyRecord createOnePage(CreateOnePageCaseStudyCommand command, String requestBaseUrl) {
+		Map<String, String> tokens = onePageContentAssembler.buildTokenValues(command.fields());
+		OnePageCaseStudySummary summary = onePageContentAssembler.summarize(tokens);
+		String slidesUrl = onePageDeckService.createDeck(command.createdBy(),
+				ONE_PAGE_DECK_TITLE_PREFIX + summary.title(), tokens,
+				onePageContentAssembler.buildIconUrls(command.icons(), requestBaseUrl));
+		CaseStudyEntity entity = caseStudyMapper.toOnePageEntity(
+				summary,
+				command.sourceFileNames(),
+				caseStudyProperties.getOnePageTemplateUrl(),
+				slidesUrl,
+				STATUS_GENERATED,
+				command.createdBy(),
 				currentTime.nowLocalDateTime());
 		return caseStudyMapper.toRecord(caseStudyRepository.save(entity));
 	}

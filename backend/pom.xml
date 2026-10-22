@@ -43,6 +43,9 @@
 		<logbook.version>3.10.0</logbook.version>
 		<swagger-annotations.version>2.2.27</swagger-annotations.version>
 		<poi.version>5.2.5</poi.version>
+		<!-- The OOXML schema classes and XmlBeans runtime the One Page Generator clones shape XML with;
+		     the versions poi-ooxml ${poi.version} itself resolves. -->
+		<xmlbeans.version>5.2.0</xmlbeans.version>
 		<pdfbox.version>3.0.2</pdfbox.version>
 		<mockwebserver.version>4.12.0</mockwebserver.version>
 		<okio.version>3.6.0</okio.version>
@@ -173,6 +176,16 @@
 				<groupId>org.apache.poi</groupId>
 				<artifactId>poi-scratchpad</artifactId>
 				<version>${poi.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.poi</groupId>
+				<artifactId>poi-ooxml-lite</artifactId>
+				<version>${poi.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.xmlbeans</groupId>
+				<artifactId>xmlbeans</artifactId>
+				<version>${xmlbeans.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.pdfbox</groupId>

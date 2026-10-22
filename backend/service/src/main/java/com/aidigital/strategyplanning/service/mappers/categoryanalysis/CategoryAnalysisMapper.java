@@ -3,7 +3,9 @@ package com.aidigital.strategyplanning.service.mappers.categoryanalysis;
 import com.aidigital.strategyplanning.domain.categoryanalysis.entities.CategoryAnalysisEntity;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CategoryAnalysisRecord;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateCategoryAnalysisCommand;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateInDepthDeckCommand;
 import com.aidigital.strategyplanning.service.categoryanalysis.models.CreateStandardDeckCommand;
+import com.aidigital.strategyplanning.service.categoryanalysis.models.RecordOnePagerCommand;
 import com.aidigital.strategyplanning.service.common.mapping.ServiceMapperConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -69,4 +71,48 @@ public interface CategoryAnalysisMapper {
 	@Mapping(target = "sourceFileNames", ignore = true)
 	CategoryAnalysisEntity toStandardDeckEntity(CreateStandardDeckCommand command, String title,
 			String slidesUrl, String templateKind, String status, LocalDateTime createdAt);
+
+	/**
+	 * Builds a new category analysis entity for an In-Depth deck created in Google Slides. As with
+	 * the Standard deck, the narrative columns stay empty because the reviewed values live in the
+	 * deck itself.
+	 *
+	 * @param command      validated deck command carrying the checked slides and reviewed values
+	 * @param title        deck title composed from the category and client
+	 * @param slidesUrl    URL of the created deck in the caller's Drive
+	 * @param templateKind template the deck was built from
+	 * @param status       lifecycle status to persist
+	 * @param createdAt    creation timestamp from the application clock
+	 * @return unsaved category analysis entity
+	 */
+	@Mapping(target = "id", ignore = true)
+	@Mapping(target = "marketOverview", ignore = true)
+	@Mapping(target = "keyPlayers", ignore = true)
+	@Mapping(target = "trends", ignore = true)
+	@Mapping(target = "opportunities", ignore = true)
+	@Mapping(target = "recommendations", ignore = true)
+	@Mapping(target = "sourceFileNames", ignore = true)
+	CategoryAnalysisEntity toInDepthDeckEntity(CreateInDepthDeckCommand command, String title,
+			String slidesUrl, String templateKind, String status, LocalDateTime createdAt);
+
+	/**
+	 * Builds a new category analysis entity for a One Page Generator page already saved in the
+	 * caller's Drive. The narrative columns stay empty: the page's content lives in the Slides
+	 * file and only the title, category, and link are kept for the "recent pages" list.
+	 *
+	 * @param command      title, category, Slides URL, and creator of the page
+	 * @param templateKind template the page was built from
+	 * @param status       lifecycle status to persist
+	 * @param createdAt    creation timestamp from the application clock
+	 * @return unsaved category analysis entity
+	 */
+	@Mapping(target = "id", ignore = true)
+	@Mapping(target = "marketOverview", ignore = true)
+	@Mapping(target = "keyPlayers", ignore = true)
+	@Mapping(target = "trends", ignore = true)
+	@Mapping(target = "opportunities", ignore = true)
+	@Mapping(target = "recommendations", ignore = true)
+	@Mapping(target = "sourceFileNames", ignore = true)
+	CategoryAnalysisEntity toOnePagerEntity(RecordOnePagerCommand command, String templateKind,
+			String status, LocalDateTime createdAt);
 }

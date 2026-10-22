@@ -3,12 +3,14 @@ package com.aidigital.strategyplanning.service.casestudy.services;
 import com.aidigital.strategyplanning.service.casestudy.models.CaseStudyDraft;
 import com.aidigital.strategyplanning.service.casestudy.models.CreateCaseStudyCommand;
 import com.aidigital.strategyplanning.service.common.files.SourceDocument;
+import com.aidigital.strategyplanning.service.common.files.SourceImage;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * Service contract for AI-drafting case study form fields from uploaded source documents.
+ * Service contract for AI-drafting case study form fields from uploaded source documents and
+ * screenshots.
  */
 public interface CaseStudyDraftService {
 
@@ -20,14 +22,17 @@ public interface CaseStudyDraftService {
 	boolean isConnected();
 
 	/**
-	 * Drafts every case study form field from the extracted text of the source documents.
+	 * Drafts every case study form field from the extracted text of the source documents and any
+	 * uploaded screenshots, which the model reads directly as images. Together the two lists hold
+	 * between 1 and the feature's maximum number of uploads; either list alone may be empty.
 	 *
-	 * @param documents parsed source documents (filename + extracted text), between 1 and 10
+	 * @param documents parsed source documents (filename + extracted text), may be empty
+	 * @param images    uploaded images such as dashboard screenshots, may be empty
 	 * @return drafted case study fields for user review
 	 * @throws com.aidigital.strategyplanning.service.common.error.AppException with C003 reason when the drafting
 	 * engine is not connected or the call fails
 	 */
-	CaseStudyDraft draft(List<SourceDocument> documents);
+	CaseStudyDraft draft(List<SourceDocument> documents, List<SourceImage> images);
 
 	/**
 	 * Maps the reviewed case study form fields onto the Google Slides template tokens.

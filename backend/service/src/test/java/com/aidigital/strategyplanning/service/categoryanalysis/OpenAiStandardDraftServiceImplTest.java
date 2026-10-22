@@ -69,6 +69,8 @@ class OpenAiStandardDraftServiceImplTest {
 				"Acme Resorts operates lakeside family holiday resorts.");
 		var root = objectMapper.readTree(body);
 		assertThat(root.path("response_format").path("type").asText()).isEqualTo("json_object");
+		assertThat(root.has("temperature")).isFalse();
+		assertThat(root.has("max_tokens")).isFalse();
 		String content = root.path("messages").path(0).path("content").asText();
 		assertThat(content)
 				.contains("Regional Travel")
@@ -178,6 +180,8 @@ class OpenAiStandardDraftServiceImplTest {
 				3, "make it Gen Z", current);
 		var root = objectMapper.readTree(body);
 		assertThat(root.path("response_format").path("type").asText()).isEqualTo("json_object");
+		assertThat(root.has("temperature")).isFalse();
+		assertThat(root.has("max_tokens")).isFalse();
 		String content = root.path("messages").path(0).path("content").asText();
 		assertThat(content).contains("Regional Travel").contains("Acme Resorts")
 				.contains("families").contains("make it Gen Z");

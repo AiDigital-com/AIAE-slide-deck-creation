@@ -4,7 +4,12 @@ import com.aidigital.strategyplanning.api.v1.CategoryAnalysesApi;
 import com.aidigital.strategyplanning.api.v1.model.CategoryAnalysisSummaryV1;
 import com.aidigital.strategyplanning.api.v1.model.CategoryAnalysisV1;
 import com.aidigital.strategyplanning.api.v1.model.CreateCategoryAnalysisRequestV1;
+import com.aidigital.strategyplanning.api.v1.model.CreateInDepthDeckRequestV1;
 import com.aidigital.strategyplanning.api.v1.model.CreateStandardDeckRequestV1;
+import com.aidigital.strategyplanning.api.v1.model.InDepthDraftRequestV1;
+import com.aidigital.strategyplanning.api.v1.model.InDepthDraftV1;
+import com.aidigital.strategyplanning.api.v1.model.InDepthSlideV1;
+import com.aidigital.strategyplanning.api.v1.model.RedraftInDepthSlideRequestV1;
 import com.aidigital.strategyplanning.api.v1.model.RedraftSlideRequestV1;
 import com.aidigital.strategyplanning.api.v1.model.StandardConnectionsV1;
 import com.aidigital.strategyplanning.api.v1.model.StandardDraftRequestV1;
@@ -97,6 +102,48 @@ public class CategoryAnalysesController implements CategoryAnalysesApi {
 		var command = categoryAnalysisApiMapper.toCommand(request, user.userId());
 		String publicBaseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
 		var record = categoryAnalysisService.createStandardDeck(command, publicBaseUrl);
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(categoryAnalysisApiMapper.toV1(record));
+	}
+
+	@Override
+	public ResponseEntity<List<InDepthSlideV1>> listInDepthSlides() {
+		return ResponseEntity.ok(
+				categoryAnalysisApiMapper.toInDepthSlideV1List(
+						categoryAnalysisService.listInDepthSlides()));
+	}
+
+	@Override
+	public ResponseEntity<InDepthDraftV1> draftInDepthCategoryAnalysis(InDepthDraftRequestV1 request) {
+		return ResponseEntity.ok(
+				categoryAnalysisApiMapper.toV1(
+						categoryAnalysisService.draftInDepth(
+								request.getCategory(),
+								request.getClientName(),
+								request.getGuidanceNotes(),
+								request.getClientWebsite(),
+								request.getSelectedSlides())));
+	}
+
+	@Override
+	public ResponseEntity<InDepthDraftV1> redraftInDepthCategorySlide(RedraftInDepthSlideRequestV1 request) {
+		return ResponseEntity.ok(
+				categoryAnalysisApiMapper.toV1(
+						categoryAnalysisService.redraftInDepthSlide(
+								request.getCategory(),
+								request.getClientName(),
+								request.getGuidanceNotes(),
+								request.getSlideNumber(),
+								request.getSlideNote(),
+								categoryAnalysisApiMapper.toInDepthFieldValues(request.getCurrentFields()))));
+	}
+
+	@Override
+	public ResponseEntity<CategoryAnalysisV1> createInDepthCategoryDeck(CreateInDepthDeckRequestV1 request) {
+		var user = appUserFactory.from(SecurityContextHolder.getContext().getAuthentication());
+		var command = categoryAnalysisApiMapper.toCommand(request, user.userId());
+		String publicBaseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+		var record = categoryAnalysisService.createInDepthDeck(command, publicBaseUrl);
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(categoryAnalysisApiMapper.toV1(record));
 	}

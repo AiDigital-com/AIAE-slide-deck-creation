@@ -19,8 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Unit tests for {@link SourceFileTextServiceImpl} covering CSV pass-through, Excel row
- * rendering, Word (docx) extraction, unsupported extensions, and empty uploads.
+ * Unit tests for {@link SourceFileTextServiceImpl} covering CSV and Markdown pass-through, Excel
+ * row rendering, Word (docx) extraction, unsupported extensions, and empty uploads.
  */
 class SourceFileTextServiceImplTest {
 
@@ -34,6 +34,21 @@ class SourceFileTextServiceImplTest {
 		String csv = "metric,value\nrevenue,120000\n";
 		String text = service.extractText("data.csv", csv.getBytes(StandardCharsets.UTF_8));
 		assertThat(text).contains("metric,value").contains("revenue,120000");
+	}
+
+	/**
+	 * Markdown files should be decoded as UTF-8 text with their markup left intact.
+	 */
+	@Test
+	void shouldExtractMarkdownAsPlainTextTest() {
+		// Given: a Markdown brief
+		String markdown = "# Acme results\n\n- Revenue **+40%**\n";
+
+		// When: the text is extracted
+		String text = service.extractText("brief.md", markdown.getBytes(StandardCharsets.UTF_8));
+
+		// Then: headings and emphasis survive as text for the prompt
+		assertThat(text).contains("# Acme results").contains("- Revenue **+40%**");
 	}
 
 	/**
@@ -79,14 +94,15 @@ class SourceFileTextServiceImplTest {
 	}
 
 	/**
-	 * Unsupported file extensions should be rejected with a C002 error.
+	 * Unsupported file extensions should be rejected with a C002 error listing the text formats.
 	 */
 	@Test
 	void rejectsUnsupportedExtension() {
-		assertThatThrownBy(() -> service.extractText("image.png", new byte[]{1, 2, 3}))
+		assertThatThrownBy(() -> service.extractText("archive.zip", new byte[]{1, 2, 3}))
 				.isInstanceOf(AppException.class)
-				.extracting(e -> ((AppException) e).getValidationMessage().getCode())
-				.isEqualTo(ErrorReason.C002.getCode());
+				.hasMessageContaining(ErrorReason.C002.getCode())
+				.hasMessageContaining("Unsupported file type \".zip\" for archive.zip")
+				.hasMessageContaining("PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, CSV, TXT, MD");
 	}
 
 	/**

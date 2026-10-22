@@ -1,5 +1,6 @@
 /** One tool card on the Strategy Toolkit home page. */
 export interface ToolCard {
+    /** Icon from the master template's Visual Elements Library, served from `/public/tool-icons`. */
     icon: string;
     title: string;
     description: string;

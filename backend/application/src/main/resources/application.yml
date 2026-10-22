@@ -120,9 +120,11 @@ app:
     # AI drafting engine — blank key means "AI not connected" in the UI.
     openai-api-key: ${OPENAI_API_KEY:}
     openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    openai-model: ${OPENAI_MODEL:gpt-4o}
+    openai-model: ${OPENAI_MODEL:gpt-6.1-sol}
     # Master Standard Category Analysis Google Slides template.
     template-presentation-id: ${CATEGORY_ANALYSIS_TEMPLATE_ID:164QKu8KTgpxYYGtX9lGXp-M_5IHXMm-oiGromJtfI3k}
+    # Master In-Depth Category Analysis Google Slides template (24-slide layout library).
+    in-depth-template-presentation-id: ${CATEGORY_ANALYSIS_IN_DEPTH_TEMPLATE_ID:1BovwD1sUrLHk6eTjrvKmPLF6L_-M0mOo93YGP1UJ2Ac}
     # Clerk secret key — used to fetch the user's Google OAuth token for Drive/Slides.
     clerk-secret-key: ${CLERK_SECRET_KEY:}
     # Friendly, on-vertical slide images generated at deck-creation time.
@@ -184,6 +186,13 @@ app:
       max-connections-per-route: ${APP_EXTERNAL_HTTP_MAX_CONNECTIONS_PER_ROUTE:10}
       keep-alive-duration: 60s
       idle-eviction-duration: 30s
+    # Google Drive file export/upload (PPTX <-> Slides) move whole files and get their own
+    # response ceiling; the export GET also gets a bounded retry on Google's transient 5xx pages.
+    # The non-idempotent upload POST is never resent (a retry could create the file twice).
+    google:
+      transfer-response-timeout: ${APP_EXTERNAL_GOOGLE_TRANSFER_RESPONSE_TIMEOUT:120s}
+      transient-retry-attempts: ${APP_EXTERNAL_GOOGLE_TRANSIENT_RETRY_ATTEMPTS:3}
+      transient-retry-backoff: 500ms
   # Logbook HTTP req/resp logging — bound by LogbookConfig. Defaults inline
   # in LogbookProperties mirror the canonical rules; override here per-app.
   # See observability/logbook-http-logging-rules.md.
@@ -201,14 +210,30 @@ app:
     template-url: ${CASE_STUDY_TEMPLATE_URL:https://docs.google.com/presentation/d/1ET3mz7ZVvbn4EDSHnpOcuCw_s5Kd3g717VPq5pnADXw/edit}
     # Master template copied into the user's Drive for each generated case study deck.
     template-presentation-id: ${CASE_STUDY_TEMPLATE_PRESENTATION_ID:1ET3mz7ZVvbn4EDSHnpOcuCw_s5Kd3g717VPq5pnADXw}
+    # Tokenized One-Page Case Study template (app-owned copy of the design master) copied per deck.
+    one-page-template-presentation-id: ${CASE_STUDY_ONE_PAGE_TEMPLATE_ID:1S2ZPNRah7OBlPQVVdssFOCah5uc_oKfrtPjYTg38SW0}
+    # Public base URL Google Slides fetches /case-study-icons/** from when swapping template icons.
+    # Blank = the address the request arrived on; set to the deployed URL when running on localhost.
+    public-asset-base-url: ${CASE_STUDY_PUBLIC_ASSET_BASE_URL:}
     # Clerk secret key — used to fetch the user's Google OAuth token for Drive/Slides.
     clerk-secret-key: ${CLERK_SECRET_KEY:}
     # AI auto-draft from uploaded source documents — blank key means "AI not connected".
     openai-api-key: ${OPENAI_API_KEY:}
     openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    openai-model: ${OPENAI_MODEL:gpt-4o}
+    openai-model: ${OPENAI_MODEL:gpt-6.1-sol}
     # Hard cap on source documents per auto-draft request.
     max-source-files: ${CASE_STUDY_MAX_SOURCE_FILES:10}
+  one-pager:
+    # One Page Generator master template ("Extended - One Pager Templates"): slides 1-3 are the
+    # header/footer shells, slides 4-6 the body-module library. Only ever exported as PPTX, never
+    # copied or edited; the assembled page is uploaded as a brand-new Slides file.
+    template-presentation-id: ${ONE_PAGER_TEMPLATE_ID:1Ghth9tTCL685cco2c3Dm2w7Avfi9sBlWYdyFSv25jW4}
+    # Clerk secret key — used to fetch the user's Google OAuth token for Drive/Slides.
+    clerk-secret-key: ${CLERK_SECRET_KEY:}
+    # AI drafting from the guidance brief — blank key means "AI not connected".
+    openai-api-key: ${OPENAI_API_KEY:}
+    openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    openai-model: ${OPENAI_MODEL:gpt-6.1-sol}
   rfp-outline:
     template-url: ${RFP_OUTLINE_TEMPLATE_URL:}
     # Master template copied into the user's Drive for each generated RFP outline doc.
@@ -220,7 +245,7 @@ app:
     # AI auto-draft from uploaded source documents — blank key means "AI not connected".
     openai-api-key: ${OPENAI_API_KEY:}
     openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    openai-model: ${OPENAI_MODEL:gpt-4o}
+    openai-model: ${OPENAI_MODEL:gpt-6.1-sol}
     # Hard cap on source documents per auto-draft request.
     max-source-files: ${RFP_OUTLINE_MAX_SOURCE_FILES:10}
   rnd-request:

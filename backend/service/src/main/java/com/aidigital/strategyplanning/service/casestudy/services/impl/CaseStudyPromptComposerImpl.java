@@ -4,12 +4,16 @@ import com.aidigital.strategyplanning.service.casestudy.config.CaseStudyProperti
 import com.aidigital.strategyplanning.service.casestudy.models.CreateCaseStudyCommand;
 import com.aidigital.strategyplanning.service.casestudy.services.CaseStudyPromptComposer;
 import com.aidigital.strategyplanning.service.common.files.SourceDocument;
+import com.aidigital.strategyplanning.service.common.files.SourceImage;
+import com.aidigital.strategyplanning.service.common.files.SourceImageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Default implementation of {@link CaseStudyPromptComposer}.
@@ -18,16 +22,30 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CaseStudyPromptComposerImpl implements CaseStudyPromptComposer {
 
+	private static final String PART_TYPE_KEY = "type";
+	private static final String PART_TYPE_TEXT = "text";
+	private static final String PART_TYPE_IMAGE_URL = "image_url";
+	private static final String IMAGE_URL_KEY = "url";
+	private static final String IMAGE_DETAIL_KEY = "detail";
+	private static final String IMAGE_DETAIL_HIGH = "high";
+
 	private final CaseStudyProperties properties;
 	private final ObjectMapper objectMapper;
+	private final SourceImageService sourceImageService;
 
 	@Override
-	public String buildRequestBody(List<SourceDocument> documents) {
+	public String buildRequestBody(List<SourceDocument> documents, List<SourceImage> images) {
 		StringBuilder prompt = new StringBuilder();
 		prompt.append("You are a senior strategist at a digital marketing agency. ")
 				.append("Draft the fields of a client case study strictly from the source documents ")
 				.append("below. Spreadsheet documents are rendered as rows with \" | \" between cells — ")
-				.append("interpret them as tabular data and pull real figures from them.\n\n");
+				.append("interpret them as tabular data and pull real figures from them.");
+		if (!images.isEmpty()) {
+			prompt.append(" Images attached after this text are screenshots (")
+					.append(images.stream().map(SourceImage::fileName).collect(Collectors.joining(", ")))
+					.append("); read figures from them too.");
+		}
+		prompt.append("\n\n");
 		for (SourceDocument document : documents) {
 			prompt.append("=== Document: ").append(document.fileName()).append(" ===\n")
 					.append(document.text()).append("\n\n");
@@ -46,14 +64,13 @@ public class CaseStudyPromptComposerImpl implements CaseStudyPromptComposer {
 
 		ObjectNode message = objectMapper.createObjectNode();
 		message.put("role", "user");
-		message.put("content", prompt.toString());
+		message.set("content", toContentParts(prompt.toString(), images));
 		ObjectNode responseFormat = objectMapper.createObjectNode();
 		responseFormat.put("type", "json_object");
 		ObjectNode payload = objectMapper.createObjectNode();
 		payload.put("model", properties.getOpenaiModel());
 		payload.set("messages", objectMapper.createArrayNode().add(message));
 		payload.set("response_format", responseFormat);
-		payload.put("temperature", 0.3);
 		return payload.toString();
 	}
 
@@ -98,8 +115,29 @@ public class CaseStudyPromptComposerImpl implements CaseStudyPromptComposer {
 		payload.put("model", properties.getOpenaiModel());
 		payload.set("messages", objectMapper.createArrayNode().add(message));
 		payload.set("response_format", responseFormat);
-		payload.put("temperature", 0.3);
 		return payload.toString();
+	}
+
+	/**
+	 * Builds the multi-part content of the drafting user message: the prompt text first, then one
+	 * {@code image_url} part per uploaded image carrying an inline data URL. With no images the
+	 * result is still a valid one-part content array.
+	 *
+	 * @param promptText assembled prompt text
+	 * @param images     uploaded images, may be empty
+	 * @return chat message content parts
+	 */
+	ArrayNode toContentParts(String promptText, List<SourceImage> images) {
+		ArrayNode parts = objectMapper.createArrayNode();
+		parts.addObject().put(PART_TYPE_KEY, PART_TYPE_TEXT).put(PART_TYPE_TEXT, promptText);
+		for (SourceImage image : images) {
+			ObjectNode part = parts.addObject();
+			part.put(PART_TYPE_KEY, PART_TYPE_IMAGE_URL);
+			part.putObject(PART_TYPE_IMAGE_URL)
+					.put(IMAGE_URL_KEY, sourceImageService.toDataUrl(image))
+					.put(IMAGE_DETAIL_KEY, IMAGE_DETAIL_HIGH);
+		}
+		return parts;
 	}
 
 	/**

@@ -131,6 +131,8 @@ public class OpenAiStandardDraftServiceImpl implements StandardDraftService {
 					"AI drafting call failed with HTTP " + failure.getStatusCode());
 			case EMPTY_CONTENT -> new AppException(ErrorReason.C003,
 					"AI drafting call returned no content");
+			case INCOMPLETE -> new AppException(ErrorReason.C003,
+					"AI drafting response was cut off before finishing — try drafting fewer slides at once");
 			case INTERRUPTED -> new AppException(ErrorReason.C003, failure,
 					"AI drafting call interrupted");
 			case TRANSPORT -> new AppException(ErrorReason.C003, failure,
