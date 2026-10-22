@@ -78,6 +78,29 @@ class SpaFallbackControllerTest {
 		assertNoFallbackHandler(mvc, "/logo.png");
 	}
 
+	@Test
+	void shouldNotCaptureTheFoldersCopiedFromTheFrontendPublicDirectoryTest() throws Exception {
+		// Given: image folders Vite copies from frontend/public; Google Slides and the browser fetch them by URL
+		MockMvc mvc = mvc();
+
+		// When-Then: none of them is answered with the React shell instead of the image
+		assertNoFallbackHandler(mvc, "/tool-icons/case-study.png");
+		assertNoFallbackHandler(mvc, "/case-study-icons/logo.png");
+		assertNoFallbackHandler(mvc, "/in-depth-slides/slide-01.png");
+		assertNoFallbackHandler(mvc, "/one-pager-modules/kpi.png");
+	}
+
+	@Test
+	void shouldStillServeTheShellForClientRoutesWithSimilarNamesTest() throws Exception {
+		// Given: client routes that merely start like a server-owned folder
+		MockMvc mvc = mvc();
+
+		// When-Then: genuine SPA routes are still answered by the fallback
+		mvc.perform(get("/one-page-generator")).andExpect(handler().methodName("spaSingleSegment"));
+		mvc.perform(get("/case-study-builder/one-page")).andExpect(handler().methodName("spaNested"));
+		mvc.perform(get("/category-analysis-builder/in-depth")).andExpect(handler().methodName("spaNested"));
+	}
+
 	/**
 	 * Asserts that no SPA fallback handler claimed the path.
 	 *

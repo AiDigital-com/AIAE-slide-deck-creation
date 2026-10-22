@@ -20,6 +20,16 @@ public class SpaFallbackController {
 	private static final Resource INDEX = new ClassPathResource("static/index.html");
 
 	/**
+	 * Top-level path prefixes the server owns, so they are never answered with the React shell:
+	 * the API, operational endpoints, hashed build assets, generated images, and the folders Vite
+	 * copies from {@code frontend/public} (tool icons, Case Study icons that Google Slides fetches,
+	 * and the In-Depth and One-Pager preview images). Add a prefix here whenever a new public
+	 * folder is introduced, together with its entry in {@code AuthConstants.PUBLIC_PATHS}.
+	 */
+	private static final String SERVER_OWNED_PREFIXES = "api|actuator|swagger-ui|v3|assets|error|public"
+			+ "|favicon\\.ico|tool-icons|case-study-icons|in-depth-slides|one-pager-modules";
+
+	/**
 	 * Root and explicit index requests.
 	 *
 	 * @return the SPA shell when the static build exists
@@ -34,7 +44,7 @@ public class SpaFallbackController {
 	 *
 	 * @return the SPA shell when the path is not an API/static asset
 	 */
-	@GetMapping("/{path:^(?!api|actuator|swagger-ui|v3|assets|error|public|favicon\\.ico)[^\\.]+$}")
+	@GetMapping("/{path:^(?!" + SERVER_OWNED_PREFIXES + ")[^\\.]+$}")
 	public ResponseEntity<Resource> spaSingleSegment() {
 		return indexHtml();
 	}
@@ -44,7 +54,7 @@ public class SpaFallbackController {
 	 *
 	 * @return the SPA shell when the path is not an API/static asset
 	 */
-	@GetMapping("/{path:^(?!api|actuator|swagger-ui|v3|assets|error|public|favicon\\.ico)[^\\.]+}/**")
+	@GetMapping("/{path:^(?!" + SERVER_OWNED_PREFIXES + ")[^\\.]+}/**")
 	public ResponseEntity<Resource> spaNested() {
 		return indexHtml();
 	}
