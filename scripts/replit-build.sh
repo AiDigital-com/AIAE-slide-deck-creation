@@ -17,9 +17,9 @@ bash scripts/verify-gates.sh
 
 cd frontend
 if [ -f package-lock.json ]; then
-  npm ci
+  npm ci --omit=dev
 else
-  npm install
+  npm install --omit=dev
 fi
 npm run generate:api
 test -n "${VITE_CLERK_PUBLISHABLE_KEY:-}" || {
