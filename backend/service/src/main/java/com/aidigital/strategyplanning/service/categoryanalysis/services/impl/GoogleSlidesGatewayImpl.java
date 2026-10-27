@@ -6,13 +6,13 @@ import com.aidigital.strategyplanning.service.categoryanalysis.config.CategoryAn
 import com.aidigital.strategyplanning.service.categoryanalysis.services.GoogleSlidesGateway;
 import com.aidigital.strategyplanning.service.common.error.AppException;
 import com.aidigital.strategyplanning.service.common.error.ErrorReason;
+import com.aidigital.strategyplanning.service.common.google.GoogleTemplateFileGateway;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.function.Supplier;
 
@@ -23,9 +23,13 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 public class GoogleSlidesGatewayImpl implements GoogleSlidesGateway {
 
+	/** Action named in copy-failure messages. */
+	public static final String COPY_ACTION = "copy the master template into your Google Drive";
+
 	private final CategoryAnalysisProperties properties;
 	private final ObjectMapper objectMapper;
 	private final GoogleWorkspaceClient googleWorkspaceClient;
+	private final GoogleTemplateFileGateway templateFileGateway;
 
 	@Override
 	public String copyTemplate(String accessToken, String deckTitle) {
@@ -34,14 +38,7 @@ public class GoogleSlidesGatewayImpl implements GoogleSlidesGateway {
 
 	@Override
 	public String copyPresentation(String accessToken, String templatePresentationId, String deckTitle) {
-		JsonNode result = call(
-				() -> googleWorkspaceClient.copyDriveFile(accessToken, templatePresentationId, deckTitle),
-				"copy the master template into your Google Drive");
-		String id = result.path("id").asText("");
-		if (!StringUtils.hasText(id)) {
-			throw new AppException(ErrorReason.C003, "Google Drive copy returned no file ID");
-		}
-		return id;
+		return templateFileGateway.copyTemplate(accessToken, templatePresentationId, deckTitle, COPY_ACTION);
 	}
 
 	/**

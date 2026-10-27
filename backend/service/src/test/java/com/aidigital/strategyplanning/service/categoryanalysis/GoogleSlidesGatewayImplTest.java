@@ -6,6 +6,7 @@ import com.aidigital.strategyplanning.external.google.model.GoogleApiFailure;
 import com.aidigital.strategyplanning.service.categoryanalysis.config.CategoryAnalysisProperties;
 import com.aidigital.strategyplanning.service.categoryanalysis.services.impl.GoogleSlidesGatewayImpl;
 import com.aidigital.strategyplanning.service.common.error.AppException;
+import com.aidigital.strategyplanning.service.common.google.impl.GoogleTemplateFileGatewayImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -40,7 +41,7 @@ class GoogleSlidesGatewayImplTest {
 				.thenReturn(objectMapper.createObjectNode().put("id", "deck_1"));
 
 		// When: the template is copied
-		String id = new GoogleSlidesGatewayImpl(properties, objectMapper, client)
+		String id = new GoogleSlidesGatewayImpl(properties, objectMapper, client, new GoogleTemplateFileGatewayImpl(objectMapper, client))
 				.copyTemplate(TOKEN, "Pet Care 2026");
 
 		// Then: the copy's id is what the rest of the flow works on
@@ -59,7 +60,7 @@ class GoogleSlidesGatewayImplTest {
 				.thenReturn(objectMapper.createObjectNode());
 
 		// When-Then: the flow stops rather than filling a deck that does not exist
-		assertThatThrownBy(() -> new GoogleSlidesGatewayImpl(properties, objectMapper, client)
+		assertThatThrownBy(() -> new GoogleSlidesGatewayImpl(properties, objectMapper, client, new GoogleTemplateFileGatewayImpl(objectMapper, client))
 				.copyTemplate(TOKEN, "Pet Care 2026"))
 				.isInstanceOf(AppException.class)
 				.hasMessageContaining("Google Drive copy returned no file ID");
@@ -74,8 +75,7 @@ class GoogleSlidesGatewayImplTest {
 				.thenReturn(objectMapper.createObjectNode().put("presentationId", "deck_1"));
 
 		// When: it is read back
-		JsonNode presentation = new GoogleSlidesGatewayImpl(new CategoryAnalysisProperties(),
-				objectMapper, client).getPresentation(TOKEN, "deck_1");
+		JsonNode presentation = new GoogleSlidesGatewayImpl(new CategoryAnalysisProperties(), objectMapper, client, new GoogleTemplateFileGatewayImpl(objectMapper, client)).getPresentation(TOKEN, "deck_1");
 
 		// Then: the flow gets the object ids it needs to place content
 		assertThat(presentation.path("presentationId").asText()).isEqualTo("deck_1");
@@ -93,7 +93,7 @@ class GoogleSlidesGatewayImplTest {
 				.thenReturn(objectMapper.createObjectNode());
 
 		// When: the batch is applied
-		new GoogleSlidesGatewayImpl(new CategoryAnalysisProperties(), objectMapper, client)
+		new GoogleSlidesGatewayImpl(new CategoryAnalysisProperties(), objectMapper, client, new GoogleTemplateFileGatewayImpl(objectMapper, client))
 				.batchUpdate(TOKEN, "deck_1", requests);
 
 		// Then: the Slides API receives the envelope shape it requires
@@ -113,12 +113,12 @@ class GoogleSlidesGatewayImplTest {
 						"{\"error\":\"forbidden\"}", "Google API returned HTTP 403"));
 
 		// When-Then: the message says what the user was trying to do
-		assertThatThrownBy(() -> new GoogleSlidesGatewayImpl(properties, objectMapper, client)
+		assertThatThrownBy(() -> new GoogleSlidesGatewayImpl(properties, objectMapper, client, new GoogleTemplateFileGatewayImpl(objectMapper, client))
 				.copyTemplate(TOKEN, "Pet Care 2026"))
 				.isInstanceOf(AppException.class)
 				.satisfies(e -> assertThat(((AppException) e).getValidationMessage().getMessage())
-						.isEqualTo("External call failed: Google API call failed while trying to "
-								+ "copy the master template into your Google Drive (HTTP 403)"));
+						.isEqualTo("External call failed: Could not "
+								+ "copy the master template into your Google Drive (Google returned HTTP 403)"));
 	}
 
 	@Test
@@ -131,8 +131,7 @@ class GoogleSlidesGatewayImplTest {
 						"Google API call interrupted", new InterruptedException("stop")));
 
 		// When-Then: an interruption reads differently from a provider rejection
-		assertThatThrownBy(() -> new GoogleSlidesGatewayImpl(new CategoryAnalysisProperties(),
-				objectMapper, client).getPresentation(TOKEN, "deck_1"))
+		assertThatThrownBy(() -> new GoogleSlidesGatewayImpl(new CategoryAnalysisProperties(), objectMapper, client, new GoogleTemplateFileGatewayImpl(objectMapper, client)).getPresentation(TOKEN, "deck_1"))
 				.isInstanceOf(AppException.class)
 				.satisfies(e -> assertThat(((AppException) e).getValidationMessage().getMessage())
 						.isEqualTo("External call failed: Google API call interrupted while trying "
@@ -152,8 +151,7 @@ class GoogleSlidesGatewayImplTest {
 						"connection reset", new IOException("connection reset")));
 
 		// When-Then: the transport reason reaches the message instead of being swallowed
-		assertThatThrownBy(() -> new GoogleSlidesGatewayImpl(new CategoryAnalysisProperties(),
-				objectMapper, client).batchUpdate(TOKEN, "deck_1", requests))
+		assertThatThrownBy(() -> new GoogleSlidesGatewayImpl(new CategoryAnalysisProperties(), objectMapper, client, new GoogleTemplateFileGatewayImpl(objectMapper, client)).batchUpdate(TOKEN, "deck_1", requests))
 				.isInstanceOf(AppException.class)
 				.satisfies(e -> assertThat(((AppException) e).getValidationMessage().getMessage())
 						.isEqualTo("External call failed: Google API call failed while trying to "

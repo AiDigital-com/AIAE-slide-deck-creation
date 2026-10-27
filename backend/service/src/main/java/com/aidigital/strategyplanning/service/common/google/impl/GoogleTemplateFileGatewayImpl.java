@@ -31,13 +31,31 @@ public class GoogleTemplateFileGatewayImpl implements GoogleTemplateFileGateway 
 
 	private static final String NO_FILE_ID_MESSAGE = "Google Drive upload returned no file ID";
 
+	/** HTTP status Drive answers with when a file does not exist or is not shared with the caller. */
+	public static final int DRIVE_NOT_FOUND_STATUS = 404;
+
+	/** Suffix explaining a template-copy 404: the file is not visible to the user's own Google account. */
+	public static final String TEMPLATE_NOT_SHARED_SUFFIX = ": Google cannot find the template for your Google"
+			+ " account. Ask the template owner to share it with everyone at the company domain (template ID ";
+
+	/** Message suffix when a tool has no template configured at all. */
+	public static final String TEMPLATE_NOT_CONFIGURED_SUFFIX =
+			": no template is configured for this tool. Ask an administrator to set its template ID.";
+
 	private final ObjectMapper objectMapper;
 	private final GoogleWorkspaceClient googleWorkspaceClient;
 
 	@Override
 	public String copyTemplate(String accessToken, String templateFileId, String title, String action) {
-		JsonNode result = call(
-				() -> googleWorkspaceClient.copyDriveFile(accessToken, templateFileId, title), action);
+		if (!StringUtils.hasText(templateFileId)) {
+			throw new AppException(ErrorReason.C003, "Could not " + action + TEMPLATE_NOT_CONFIGURED_SUFFIX);
+		}
+		JsonNode result;
+		try {
+			result = call(() -> googleWorkspaceClient.copyDriveFile(accessToken, templateFileId, title), action);
+		} catch (AppException e) {
+			throw templateCopyFailure(e, templateFileId, action);
+		}
 		String id = result.path("id").asText("");
 		if (!StringUtils.hasText(id)) {
 			throw new AppException(ErrorReason.C003, "Google Drive copy returned no file ID");
@@ -98,6 +116,26 @@ public class GoogleTemplateFileGatewayImpl implements GoogleTemplateFileGateway 
 	}
 
 	/**
+	 * Rewrites a template-copy failure so a Drive 404 explains the real cause. Drive answers 404
+	 * both for a missing file and for a file the caller cannot see, and every copy runs on the
+	 * user's own OAuth token, so a 404 almost always means the template was never shared with
+	 * that user. Other failures pass through unchanged.
+	 *
+	 * @param failure        the error {@link #call(Supplier, String)} produced
+	 * @param templateFileId the template the copy was attempted from
+	 * @param action         human-readable description of what the call was for
+	 * @return the exception to throw instead
+	 */
+	AppException templateCopyFailure(AppException failure, String templateFileId, String action) {
+		if (!(failure.getCause() instanceof GoogleApiException google)
+				|| google.getStatusCode() != DRIVE_NOT_FOUND_STATUS) {
+			return failure;
+		}
+		return new AppException(ErrorReason.C003, google,
+				"Could not " + action + TEMPLATE_NOT_SHARED_SUFFIX + templateFileId + ", HTTP 404)");
+	}
+
+	/**
 	 * Runs a Google call and translates a provider failure into an application error that names
 	 * the action the user was trying to perform.
 	 *
@@ -112,7 +150,7 @@ public class GoogleTemplateFileGatewayImpl implements GoogleTemplateFileGateway 
 			return call.get();
 		} catch (GoogleApiException e) {
 			throw switch (e.getFailure()) {
-				case HTTP_STATUS -> new AppException(ErrorReason.C003,
+				case HTTP_STATUS -> new AppException(ErrorReason.C003, e,
 						"Could not " + action + " (Google returned HTTP " + e.getStatusCode() + ")");
 				case INTERRUPTED -> new AppException(ErrorReason.C003, e,
 						"Could not " + action + " — call interrupted");
