@@ -3,6 +3,7 @@ package com.aidigital.strategyplanning.service.onepager.services.impl;
 import com.aidigital.strategyplanning.service.onepager.models.OnePagerParagraphStyle;
 import com.aidigital.strategyplanning.service.onepager.models.OnePagerRunStyle;
 import com.aidigital.strategyplanning.service.onepager.services.OnePagerTextFitter;
+import org.apache.poi.sl.usermodel.TextShape.TextAutofit;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFAutoShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
@@ -172,5 +173,27 @@ class OnePagerTextWriterImplTest {
 		assertThat(writer.stripMarkdown("plain")).isEqualTo("plain");
 		assertThat(writer.stripMarkdown(null)).isNull();
 		verifyNoInteractions(fitter);
+	}
+
+	@Test
+	void shouldMakeEveryWrittenBoxShrinkItsTextOnOverflowTest() throws IOException {
+		// Given: boxes authored like the master, one without autofit and one that resizes to its text
+		try (XMLSlideShow show = new XMLSlideShow()) {
+			XSLFTextBox noAutofit = styledBox(show.createSlide(), "Old");
+			noAutofit.setTextAutofit(TextAutofit.NONE);
+			XSLFTextBox growsWithText = styledBox(show.createSlide(), "Old");
+			growsWithText.setTextAutofit(TextAutofit.SHAPE);
+			OnePagerTextWriterImpl writer = new OnePagerTextWriterImpl(mock(OnePagerTextFitter.class));
+
+			// When: drafted copy is written into both, by lines and by two paragraphs
+			writer.setLines(noAutofit, List.of("A much longer drafted line than the sample", "and another"));
+			writer.setTwoParagraphs(growsWithText, "Title", writer.captureStyle(growsWithText),
+					"Body copy that may run past the sample length", writer.captureStyle(growsWithText));
+
+			// Then: both boxes shrink their text instead of overflowing or growing into the next module
+			assertThat(noAutofit.getTextAutofit()).isEqualTo(TextAutofit.NORMAL);
+			assertThat(growsWithText.getTextAutofit()).isEqualTo(TextAutofit.NORMAL);
+			assertThat(noAutofit.getText()).startsWith("A much longer");
+		}
 	}
 }
