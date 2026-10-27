@@ -17,6 +17,7 @@ import com.aidigital.strategyplanning.service.categoryanalysis.services.impl.Sta
 import com.aidigital.strategyplanning.service.common.google.impl.GoogleGrantServiceImpl;
 import com.aidigital.strategyplanning.service.categoryanalysis.templates.StandardTemplateTokens;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.aidigital.strategyplanning.service.common.google.impl.GoogleTemplateFileGatewayImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,7 +59,8 @@ class GoogleDeckServiceImplTest {
 		requestFactory = new SlidesRequestFactoryImpl(objectMapper, inspector);
 		GoogleGrantServiceImpl grantService = new GoogleGrantServiceImpl(mock(ClerkOAuthClient.class));
 		GoogleSlidesGatewayImpl gateway =
-				new GoogleSlidesGatewayImpl(properties, objectMapper, workspaceClient);
+				new GoogleSlidesGatewayImpl(properties, objectMapper, workspaceClient,
+						new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient));
 		service = new GoogleDeckServiceImpl(properties, inspector, requestFactory,
 				new StandardDeckTemplateAdjusterImpl(objectMapper, inspector), grantService, gateway,
 				new DeckSourceHyperlinkServiceImpl(linkService, requestFactory, gateway),

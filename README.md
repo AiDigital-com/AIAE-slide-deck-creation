@@ -189,7 +189,14 @@ instance that serves the same assets.
 - `.replit` Reserved VM target → company infrastructure.
 - Product owner and tech contact in this README.
 - The RFP outline Google Doc template: `RFP_OUTLINE_TEMPLATE_DOC_ID` ships
-  blank, so Doc export does nothing until the template exists.
+  blank, so Doc export fails with "no template is configured" until the
+  template exists and the variable is set.
+- Every Google template (Case Study three-page and one-page, Category Analysis
+  Standard and In-Depth, One-Pager master, RFP outline doc) is copied with the
+  signed-in user's own Google token. A template that is not shared with that
+  user fails with Drive HTTP 404 ("Google cannot find the template for your
+  Google account"). Share each template with everyone at the company domain
+  (viewer is enough) before rolling a tool out.
 - Synchronous generation → a background job with retries and progress.
 - MVP coverage floor → the strict floor, via the `finalize-coverage` step.
 

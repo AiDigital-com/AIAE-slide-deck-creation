@@ -278,4 +278,39 @@ class GoogleTemplateFileGatewayImplTest {
 				.isInstanceOf(AppException.class)
 				.hasMessageContaining("Could not read the one-pager master template (Google returned HTTP 404)");
 	}
+
+	@Test
+	void shouldExplainThatTheTemplateIsNotSharedWhenDriveAnswers404Test() {
+		// Given: Drive cannot see the template from this user's account
+		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
+		ObjectMapper objectMapper = new ObjectMapper();
+		when(workspaceClient.copyDriveFile(TOKEN, TEMPLATE_ID, "Deck"))
+				.thenThrow(new GoogleApiException(GoogleApiFailure.HTTP_STATUS, 404,
+						"{\"error\":\"notFound\"}", "Google API returned HTTP 404"));
+
+		// When-Then: the message tells the user to get the template shared and names it
+		assertThatThrownBy(() -> new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient)
+				.copyTemplate(TOKEN, TEMPLATE_ID, "Deck", COPY_ACTION))
+				.isInstanceOf(AppException.class)
+				.satisfies(e -> assertThat(((AppException) e).getValidationMessage().getMessage())
+						.isEqualTo("External call failed: Could not " + COPY_ACTION
+								+ GoogleTemplateFileGatewayImpl.TEMPLATE_NOT_SHARED_SUFFIX + TEMPLATE_ID
+								+ ", HTTP 404)"));
+	}
+
+	@Test
+	void shouldRejectACopyWithoutAConfiguredTemplateBeforeCallingGoogleTest() {
+		// Given: the tool's template ID is blank (the env var was never set)
+		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
+		ObjectMapper objectMapper = new ObjectMapper();
+
+		// When-Then: the user is told the template is missing, and Drive is never called
+		assertThatThrownBy(() -> new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient)
+				.copyTemplate(TOKEN, " ", "Deck", COPY_ACTION))
+				.isInstanceOf(AppException.class)
+				.satisfies(e -> assertThat(((AppException) e).getValidationMessage().getMessage())
+						.isEqualTo("External call failed: Could not " + COPY_ACTION
+								+ GoogleTemplateFileGatewayImpl.TEMPLATE_NOT_CONFIGURED_SUFFIX));
+		verifyNoInteractions(workspaceClient);
+	}
 }

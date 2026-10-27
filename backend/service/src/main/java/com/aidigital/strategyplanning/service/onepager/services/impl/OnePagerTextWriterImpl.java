@@ -6,6 +6,7 @@ import com.aidigital.strategyplanning.service.onepager.services.OnePagerTextFitt
 import com.aidigital.strategyplanning.service.onepager.services.OnePagerTextWriter;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.sl.usermodel.PaintStyle;
+import org.apache.poi.sl.usermodel.TextShape.TextAutofit;
 import org.apache.poi.xslf.usermodel.XSLFShape;
 import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
 import org.apache.poi.xslf.usermodel.XSLFTextRun;
@@ -160,6 +161,7 @@ public class OnePagerTextWriterImpl implements OnePagerTextWriter {
 		OnePagerRunStyle style = captureStyle(shape);
 		OnePagerParagraphStyle paragraphStyle = captureParagraphStyle(shape);
 		shape.clearText();
+		shrinkOnOverflow(shape);
 		List<String> effectiveLines = lines == null || lines.isEmpty() ? List.of("") : lines;
 		for (String line : effectiveLines) {
 			addParagraph(shape, line, style, paragraphStyle);
@@ -171,8 +173,22 @@ public class OnePagerTextWriterImpl implements OnePagerTextWriter {
 			String secondText, OnePagerRunStyle secondStyle) {
 		OnePagerParagraphStyle paragraphStyle = captureParagraphStyle(shape);
 		shape.clearText();
+		shrinkOnOverflow(shape);
 		addParagraph(shape, firstText, firstStyle, paragraphStyle);
 		addParagraph(shape, secondText, secondStyle, paragraphStyle);
+	}
+
+	/**
+	 * Makes a written box shrink its text on overflow instead of overflowing or growing. The
+	 * master's boxes are authored with no autofit or with "resize shape to fit text"; with drafted
+	 * copy that is longer than the sample, the first spills over the box edge and the second grows
+	 * the shape into the module below, because modules are stacked at fixed heights. Normal
+	 * autofit keeps the box where it is and lets Google Slides scale the font down to fit.
+	 *
+	 * @param shape text shape that has just been rewritten
+	 */
+	void shrinkOnOverflow(XSLFTextShape shape) {
+		shape.setTextAutofit(TextAutofit.NORMAL);
 	}
 
 	@Override
