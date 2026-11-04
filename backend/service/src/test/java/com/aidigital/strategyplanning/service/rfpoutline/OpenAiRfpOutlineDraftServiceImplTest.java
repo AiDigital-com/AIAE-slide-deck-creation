@@ -97,7 +97,7 @@ class OpenAiRfpOutlineDraftServiceImplTest {
 				"opportunity", "solution", "outcome", "outline", "rfp.pdf, annex.docx");
 		when(composer.buildRequestBody(documents, "focus on retail")).thenReturn(REQUEST_BODY);
 		when(chatClient.complete(new OpenAiChatCall(BASE_URL, CONNECTED_KEY, REQUEST_BODY,
-				Duration.ofSeconds(240)))).thenReturn(MODEL_REPLY);
+				Duration.ofSeconds(480)))).thenReturn(MODEL_REPLY);
 		when(parser.parseDraft(MODEL_REPLY, "rfp.pdf, annex.docx")).thenReturn(expected);
 		OpenAiRfpOutlineDraftServiceImpl service =
 				service(CONNECTED_KEY, chatClient, composer, parser);
@@ -141,7 +141,7 @@ class OpenAiRfpOutlineDraftServiceImplTest {
 	private OpenAiRfpOutlineDraftServiceImpl serviceFailingWith(OpenAiExternalException failure) {
 		OpenAiChatClient chatClient = mock(OpenAiChatClient.class);
 		when(chatClient.complete(new OpenAiChatCall(BASE_URL, CONNECTED_KEY, REQUEST_BODY,
-				Duration.ofSeconds(240)))).thenThrow(failure);
+				Duration.ofSeconds(480)))).thenThrow(failure);
 		return service(CONNECTED_KEY, chatClient, mock(RfpOutlinePromptComposer.class),
 				mock(RfpOutlineDraftParser.class));
 	}

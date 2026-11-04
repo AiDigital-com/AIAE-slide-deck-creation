@@ -21,8 +21,18 @@ public class RfpOutlinePromptComposerImpl implements RfpOutlinePromptComposer {
 	/** Chat Completions key bounding the completion, reasoning tokens included. */
 	private static final String MAX_COMPLETION_TOKENS_KEY = "max_completion_tokens";
 
-	/** Completion budget for a fully detailed deck outline. */
-	private static final int MAX_COMPLETION_TOKENS = 8000;
+	/**
+	 * Completion budget for a fully detailed deck outline. A measured draft from a three-page RFP
+	 * needs about 9,000 completion tokens; 8,000 left the reasoning model with no room for the
+	 * answer and the call ended with {@code finish_reason=length} and empty content.
+	 */
+	private static final int MAX_COMPLETION_TOKENS = 32000;
+
+	/** Chat Completions key selecting how much the model reasons before answering. */
+	private static final String REASONING_EFFORT_KEY = "reasoning_effort";
+
+	/** Lowest supported effort: the brief is explicit, so reasoning adds latency, not quality. */
+	private static final String REASONING_EFFORT = "low";
 
 	private final RfpOutlineProperties properties;
 	private final ObjectMapper objectMapper;
@@ -220,6 +230,7 @@ public class RfpOutlinePromptComposerImpl implements RfpOutlinePromptComposer {
 		// breakouts, tables, closing lists) runs long — give the model ample room so it isn't
 		// cut short and forced to compress detail to fit.
 		payload.put(MAX_COMPLETION_TOKENS_KEY, MAX_COMPLETION_TOKENS);
+		payload.put(REASONING_EFFORT_KEY, REASONING_EFFORT);
 		return payload.toString();
 	}
 }

@@ -113,7 +113,8 @@ class RfpOutlinePromptComposerImplTest {
 		assertThat(payload.get("response_format").get("type").asText()).isEqualTo("json_object");
 		assertThat(payload.has("temperature")).isFalse();
 		assertThat(payload.has("max_tokens")).isFalse();
-		assertThat(payload.get("max_completion_tokens").asInt()).isEqualTo(8000);
+		assertThat(payload.get("max_completion_tokens").asInt()).isEqualTo(32000);
+		assertThat(payload.get("reasoning_effort").asText()).isEqualTo("low");
 		assertThat(payload.get("messages").get(0).get("role").asText()).isEqualTo("user");
 	}
 
