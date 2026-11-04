@@ -4,10 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { AppShell } from "../../../app/AppShell";
+import { describeApiError } from "../../../shared/api/apiError";
 import { apiClient } from "../../../shared/api/client";
 import { ErrorAlert } from "../../../shared/ui/ErrorAlert";
 import { LoadingBlock } from "../../../shared/ui/LoadingBlock";
-import { EMPTY_FORM, MAX_SOURCE_FILES } from "../constants/form";
+import {
+    CREATE_FALLBACK_ERROR,
+    DRAFT_FALLBACK_ERROR,
+    EMPTY_FORM,
+    MAX_SOURCE_FILES,
+    RFP_FIELD_LABELS,
+} from "../constants/form";
 import type { FieldErrors, FormState } from "../model/types";
 import "./rfp-outline-generator.css";
 
@@ -47,9 +54,8 @@ export function RfpOutlineGeneratorPage() {
                     sourceFileName: formData.sourceFileName || null,
                 },
             });
-            if (error) {
-                const detail = (error as { message?: string } | null)?.message;
-                throw new Error(detail || "Failed to create RFP outline");
+            if (error || !data) {
+                throw new Error(describeApiError(error, CREATE_FALLBACK_ERROR, RFP_FIELD_LABELS));
             }
             return data;
         },
@@ -69,7 +75,9 @@ export function RfpOutlineGeneratorPage() {
                 body: formData as unknown as { files: string[] },
                 bodySerializer: () => formData,
             });
-            if (error) throw new Error("Failed to draft RFP outline from files");
+            if (error || !data) {
+                throw new Error(describeApiError(error, DRAFT_FALLBACK_ERROR, RFP_FIELD_LABELS));
+            }
             return data;
         },
         onSuccess: (draft) => {
@@ -255,7 +263,13 @@ export function RfpOutlineGeneratorPage() {
                             )}
 
                             {draftMutation.isError && (
-                                <ErrorAlert message="Could not draft from the uploaded files. Check the file types and try again." />
+                                <ErrorAlert
+                                    message={
+                                        draftMutation.error instanceof Error && draftMutation.error.message
+                                            ? draftMutation.error.message
+                                            : DRAFT_FALLBACK_ERROR
+                                    }
+                                />
                             )}
 
                             {draftMutation.isSuccess && (
@@ -380,7 +394,7 @@ export function RfpOutlineGeneratorPage() {
                                     message={
                                         createMutation.error instanceof Error && createMutation.error.message
                                             ? createMutation.error.message
-                                            : "Failed to export the RFP outline. Please try again."
+                                            : CREATE_FALLBACK_ERROR
                                     }
                                 />
                             )}

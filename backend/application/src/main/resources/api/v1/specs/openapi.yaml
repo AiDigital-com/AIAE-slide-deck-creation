@@ -1929,27 +1929,27 @@ components:
           description: Industry or sector of the client.
         challenge:
           type: string
-          maxLength: 5000
+          maxLength: 20000
           nullable: true
           description: The client's core challenge or need.
         opportunity:
           type: string
-          maxLength: 5000
+          maxLength: 20000
           nullable: true
           description: The differentiator or angle that makes AI Digital's approach compelling for this client.
         solution:
           type: string
-          maxLength: 5000
+          maxLength: 20000
           nullable: true
           description: The proposed strategic approach at a high level.
         outcome:
           type: string
-          maxLength: 5000
+          maxLength: 20000
           nullable: true
           description: What success looks like.
         deckOutline:
           type: string
-          maxLength: 20000
+          maxLength: 100000
           nullable: true
           description: Slide-by-slide breakdown of how the response deck should be structured.
         supplementaryNotes:

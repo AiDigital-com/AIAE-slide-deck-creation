@@ -165,8 +165,8 @@ class RfpOutlinesControllerTest {
 
 	@Test
 	void shouldRejectCreateWithOverlongDeckOutlineAsBadRequestTest() throws Exception {
-		// Given: a deck outline one character past the contract's maxLength of 20000
-		String outline = "x".repeat(20001);
+		// Given: a deck outline one character past the contract's maxLength of 100000
+		String outline = "x".repeat(100001);
 
 		// When: it is posted
 		ResultActions response = mvc.perform(post(RFP_OUTLINES_URL)
