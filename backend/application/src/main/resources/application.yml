@@ -235,11 +235,8 @@ app:
     openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
     openai-model: ${OPENAI_MODEL:gpt-6.1-sol}
   rfp-outline:
-    template-url: ${RFP_OUTLINE_TEMPLATE_URL:}
-    # Master template copied into the user's Drive for each generated RFP outline doc.
-    # Engineering/Sheldon must create this Google Doc template with {{token}} placeholders
-    # (see RfpOutlineTemplateTokens) and set its file ID here before Doc export will work.
-    template-doc-id: ${RFP_OUTLINE_TEMPLATE_DOC_ID:}
+    # No master template: every RFP response is shaped differently, so the outline doc is
+    # created blank in the user's Drive and written from the drafted sections.
     # Clerk secret key — used to fetch the user's Google OAuth token for Drive/Docs.
     clerk-secret-key: ${CLERK_SECRET_KEY:}
     # AI auto-draft from uploaded source documents — blank key means "AI not connected".

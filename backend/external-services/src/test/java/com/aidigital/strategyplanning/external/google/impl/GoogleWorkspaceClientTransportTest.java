@@ -79,6 +79,27 @@ class GoogleWorkspaceClientTransportTest {
 	}
 
 	@Test
+	void shouldCreateABlankDocumentWithTheUsersTokenTest() throws Exception {
+		// Given: Docs answers the create with the new document
+		try (MockWebServer server = new MockWebServer()) {
+			server.start();
+			server.enqueue(new MockResponse().setResponseCode(200)
+					.setBody("{\"documentId\":\"doc_1\",\"title\":\"Acme RFP\"}"));
+
+			// When: a blank document is created
+			JsonNode result = clientFor(server, new ObjectMapper()).createDocument(TOKEN, "Acme RFP");
+
+			// Then: the request posts only the title to the documents collection with the user's token
+			assertThat(result.path("documentId").asText()).isEqualTo("doc_1");
+			RecordedRequest request = server.takeRequest();
+			assertThat(request.getMethod()).isEqualTo("POST");
+			assertThat(request.getPath()).isEqualTo("/documents");
+			assertThat(request.getHeader(HttpHeaders.AUTHORIZATION)).isEqualTo("Bearer " + TOKEN);
+			assertThat(request.getBody().readUtf8()).isEqualTo("{\"title\":\"Acme RFP\"}");
+		}
+	}
+
+	@Test
 	void shouldReadAPresentationTest() throws Exception {
 		// Given: Slides returns a presentation
 		try (MockWebServer server = new MockWebServer()) {

@@ -5,7 +5,7 @@ import com.aidigital.strategyplanning.service.common.error.AppException;
 import com.aidigital.strategyplanning.service.common.error.ErrorReason;
 import com.aidigital.strategyplanning.service.common.google.GoogleGrantService;
 import com.aidigital.strategyplanning.service.common.google.GoogleTemplateFileGateway;
-import com.aidigital.strategyplanning.service.common.google.TokenReplacementRequestFactory;
+import com.aidigital.strategyplanning.service.rfpoutline.services.RfpOutlineDocRequestFactory;
 import com.aidigital.strategyplanning.service.common.google.models.GoogleOAuthScope;
 import com.aidigital.strategyplanning.service.rfpoutline.config.RfpOutlineProperties;
 import com.aidigital.strategyplanning.service.rfpoutline.services.RfpOutlineDocService;
@@ -17,10 +17,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Google Drive/Docs implementation of {@link RfpOutlineDocService}. Mirrors the Case Study deck flow:
- * fetches the user's Google OAuth access token from Clerk, copies the tokenized master template
- * into the user's Drive, and fills every {@code {{token}}} with the reviewed RFP outline values via a
- * single batchUpdate call against the Docs API.
+ * Google Drive/Docs implementation of {@link RfpOutlineDocService}. Fetches the user's Google OAuth
+ * access token from Clerk, creates a blank Google Doc in the user's Drive, and writes the reviewed
+ * outline into it as headed sections via a single batchUpdate call. No master template is involved:
+ * every RFP response is shaped differently, so the document is built from the drafted content alone.
  */
 @Service
 @RequiredArgsConstructor
@@ -28,23 +28,22 @@ public class GoogleRfpOutlineDocServiceImpl implements RfpOutlineDocService {
 
 	private static final Set<GoogleOAuthScope> REQUIRED_SCOPES =
 			Set.of(GoogleOAuthScope.DRIVE, GoogleOAuthScope.DOCS);
-	private static final String COPY_ACTION = "copy the RFP outline template into your Google Drive";
-	private static final String FILL_ACTION = "fill the RFP outline doc";
+	private static final String CREATE_ACTION = "create the RFP outline doc in your Google Drive";
+	private static final String FILL_ACTION = "write the RFP outline doc";
 	private static final String DOC_URL_PREFIX = "https://docs.google.com/document/d/";
 	private static final String DOC_URL_SUFFIX = "/edit";
 
 	private final RfpOutlineProperties properties;
 	private final GoogleGrantService googleGrantService;
 	private final GoogleTemplateFileGateway templateFileGateway;
-	private final TokenReplacementRequestFactory requestFactory;
+	private final RfpOutlineDocRequestFactory requestFactory;
 
 	@Override
-	public String createDoc(String userId, String docTitle, Map<String, String> tokenValues) {
+	public String createDoc(String userId, String docTitle, Map<String, String> sectionValues) {
 		String accessToken = grantedAccessToken(userId);
-		String documentId = templateFileGateway.copyTemplate(accessToken,
-				properties.getTemplateDocId(), docTitle, COPY_ACTION);
+		String documentId = templateFileGateway.createDocument(accessToken, docTitle, CREATE_ACTION);
 		templateFileGateway.fillDocument(accessToken, documentId,
-				requestFactory.buildReplaceTextRequests(tokenValues), FILL_ACTION);
+				requestFactory.buildDocumentRequests(docTitle, sectionValues), FILL_ACTION);
 		return DOC_URL_PREFIX + documentId + DOC_URL_SUFFIX;
 	}
 

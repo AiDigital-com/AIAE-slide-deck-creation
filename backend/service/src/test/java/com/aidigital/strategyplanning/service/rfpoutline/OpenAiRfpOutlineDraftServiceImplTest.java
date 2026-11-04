@@ -13,11 +13,12 @@ import com.aidigital.strategyplanning.service.rfpoutline.models.RfpOutlineDraft;
 import com.aidigital.strategyplanning.service.rfpoutline.services.RfpOutlineDraftParser;
 import com.aidigital.strategyplanning.service.rfpoutline.services.RfpOutlinePromptComposer;
 import com.aidigital.strategyplanning.service.rfpoutline.services.impl.OpenAiRfpOutlineDraftServiceImpl;
-import com.aidigital.strategyplanning.service.rfpoutline.templates.RfpOutlineTemplateTokens;
+import com.aidigital.strategyplanning.service.rfpoutline.enums.RfpOutlineSection;
 import org.junit.jupiter.api.Test;
 
 import java.net.SocketTimeoutException;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -119,11 +120,12 @@ class OpenAiRfpOutlineDraftServiceImplTest {
 				"Costs were rising", null, "We rebuilt the funnel", null, "1. Intro", null,
 				"rfp.pdf", "user_123");
 
-		// When: template token values are built for the Google Doc
+		// When: section values are built for the Google Doc
 		Map<String, String> values = service.buildTemplateTokenValues(command);
 
-		// Then: every token is present and non-null, so no {{token}} is left on the exported doc
-		assertThat(values.keySet()).containsExactlyElementsOf(RfpOutlineTemplateTokens.TOKEN_KEYS);
+		// Then: every section is present and non-null
+		assertThat(values.keySet()).containsExactlyElementsOf(
+				Arrays.stream(RfpOutlineSection.values()).map(RfpOutlineSection::getKey).toList());
 		assertThat(values.values()).doesNotContainNull();
 		assertThat(values.get("client_name")).isEqualTo("Acme");
 		assertThat(values.get("challenge")).isEqualTo("Costs were rising");

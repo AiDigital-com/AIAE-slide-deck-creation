@@ -30,6 +30,7 @@ public class GoogleTemplateFileGatewayImpl implements GoogleTemplateFileGateway 
 			"application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 	private static final String NO_FILE_ID_MESSAGE = "Google Drive upload returned no file ID";
+	private static final String NO_DOCUMENT_ID_MESSAGE = "Google Docs create returned no document ID";
 
 	/** HTTP status Drive answers with when a file does not exist or is not shared with the caller. */
 	public static final int DRIVE_NOT_FOUND_STATUS = 404;
@@ -59,6 +60,16 @@ public class GoogleTemplateFileGatewayImpl implements GoogleTemplateFileGateway 
 		String id = result.path("id").asText("");
 		if (!StringUtils.hasText(id)) {
 			throw new AppException(ErrorReason.C003, "Google Drive copy returned no file ID");
+		}
+		return id;
+	}
+
+	@Override
+	public String createDocument(String accessToken, String title, String action) {
+		JsonNode result = call(() -> googleWorkspaceClient.createDocument(accessToken, title), action);
+		String id = result.path("documentId").asText("");
+		if (!StringUtils.hasText(id)) {
+			throw new AppException(ErrorReason.C003, NO_DOCUMENT_ID_MESSAGE);
 		}
 		return id;
 	}

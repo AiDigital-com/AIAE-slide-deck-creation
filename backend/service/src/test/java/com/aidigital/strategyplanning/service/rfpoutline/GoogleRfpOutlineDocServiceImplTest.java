@@ -6,20 +6,24 @@ import com.aidigital.strategyplanning.external.google.GoogleWorkspaceClient;
 import com.aidigital.strategyplanning.service.common.error.AppException;
 import com.aidigital.strategyplanning.service.common.google.impl.GoogleGrantServiceImpl;
 import com.aidigital.strategyplanning.service.common.google.impl.GoogleTemplateFileGatewayImpl;
-import com.aidigital.strategyplanning.service.common.google.impl.TokenReplacementRequestFactoryImpl;
+import com.aidigital.strategyplanning.service.rfpoutline.services.impl.RfpOutlineDocRequestFactoryImpl;
 import com.aidigital.strategyplanning.service.rfpoutline.config.RfpOutlineProperties;
 import com.aidigital.strategyplanning.service.rfpoutline.services.impl.GoogleRfpOutlineDocServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -35,9 +39,6 @@ class GoogleRfpOutlineDocServiceImplTest {
 	private static final String SLIDES = "https://www.googleapis.com/auth/presentations";
 	private static final String SECRET = "sk_test";
 	private static final String TOKEN = "ya29.token";
-	private static final String ONE_TOKEN_BODY =
-			"{\"requests\":[{\"replaceAllText\":{\"containsText\":{\"text\":\"{{scope}}\","
-					+ "\"matchCase\":true},\"replaceText\":\"Discovery\"}}]}";
 
 	@Test
 	void shouldFailWithC003WhenNoClerkSecretIsConfiguredTest() {
@@ -47,7 +48,7 @@ class GoogleRfpOutlineDocServiceImplTest {
 		GoogleRfpOutlineDocServiceImpl service = new GoogleRfpOutlineDocServiceImpl(properties,
 				new GoogleGrantServiceImpl(mock(ClerkOAuthClient.class)),
 				new GoogleTemplateFileGatewayImpl(objectMapper, mock(GoogleWorkspaceClient.class)),
-				new TokenReplacementRequestFactoryImpl(objectMapper));
+				new RfpOutlineDocRequestFactoryImpl(objectMapper));
 
 		// When-Then: the caller sees the external-call error code, not a 500
 		assertThatThrownBy(() -> service.createDoc("user_1", "Outline", Map.of()))
@@ -68,7 +69,7 @@ class GoogleRfpOutlineDocServiceImplTest {
 		GoogleRfpOutlineDocServiceImpl service = new GoogleRfpOutlineDocServiceImpl(properties,
 				new GoogleGrantServiceImpl(clerkClient),
 				new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient),
-				new TokenReplacementRequestFactoryImpl(objectMapper));
+				new RfpOutlineDocRequestFactoryImpl(objectMapper));
 
 		// When-Then: the message tells them what to do, and Google is never called
 		assertThatThrownBy(() -> service.createDoc("user_1", "Outline", Map.of()))
@@ -91,7 +92,7 @@ class GoogleRfpOutlineDocServiceImplTest {
 		GoogleRfpOutlineDocServiceImpl service = new GoogleRfpOutlineDocServiceImpl(properties,
 				new GoogleGrantServiceImpl(clerkClient),
 				new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient),
-				new TokenReplacementRequestFactoryImpl(objectMapper));
+				new RfpOutlineDocRequestFactoryImpl(objectMapper));
 
 		// When-Then: a deck-shaped grant does not silently produce a broken doc
 		assertThatThrownBy(() -> service.createDoc("user_1", "Outline", Map.of()))
@@ -102,59 +103,36 @@ class GoogleRfpOutlineDocServiceImplTest {
 	}
 
 	@Test
-	void shouldCopyTheTemplateAndReturnTheDocumentUrlTest() {
-		// Given: a fully granted user and a Drive that copies the template
+	void shouldCreateABlankDocWriteTheSectionsAndReturnTheUrlTest() {
+		// Given: a fully granted user and a Docs API that creates the document
 		RfpOutlineProperties properties = new RfpOutlineProperties();
 		properties.setClerkSecretKey(SECRET);
-		properties.setTemplateDocId("template_doc");
 		ObjectMapper objectMapper = new ObjectMapper();
 		ClerkOAuthClient clerkClient = mock(ClerkOAuthClient.class);
 		when(clerkClient.fetchGrant(SECRET, "user_1", "oauth_google"))
 				.thenReturn(new ClerkOAuthGrant(TOKEN, List.of(DRIVE, DOCS)));
 		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
-		when(workspaceClient.copyDriveFile(TOKEN, "template_doc", "Outline"))
-				.thenReturn(objectMapper.createObjectNode().put("id", "doc_1"));
-		when(workspaceClient.batchUpdateDocument(TOKEN, "doc_1", ONE_TOKEN_BODY))
+		when(workspaceClient.createDocument(TOKEN, "Outline"))
+				.thenReturn(objectMapper.createObjectNode().put("documentId", "doc_1"));
+		ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+		when(workspaceClient.batchUpdateDocument(eq(TOKEN), eq("doc_1"), body.capture()))
 				.thenReturn(objectMapper.createObjectNode());
 		GoogleRfpOutlineDocServiceImpl service = new GoogleRfpOutlineDocServiceImpl(properties,
 				new GoogleGrantServiceImpl(clerkClient),
 				new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient),
-				new TokenReplacementRequestFactoryImpl(objectMapper));
+				new RfpOutlineDocRequestFactoryImpl(objectMapper));
 
 		// When: the doc is created
-		String url = service.createDoc("user_1", "Outline", Map.of("scope", "Discovery"));
+		String url = service.createDoc("user_1", "Outline", Map.of("challenge", "Costs were rising"));
 
-		// Then: the user gets an editable Docs link, and the copy used their own token
+		// Then: the user gets an editable Docs link, no template was copied, and the written text
+		// carries the title and the headed section
 		assertThat(url).isEqualTo("https://docs.google.com/document/d/doc_1/edit");
-		verify(workspaceClient).copyDriveFile(TOKEN, "template_doc", "Outline");
-		verify(workspaceClient).batchUpdateDocument(TOKEN, "doc_1", ONE_TOKEN_BODY);
+		verify(workspaceClient).createDocument(TOKEN, "Outline");
+		verify(workspaceClient).batchUpdateDocument(eq(TOKEN), eq("doc_1"), body.capture());
+		verifyNoMoreInteractions(workspaceClient);
+		assertThat(body.getValue()).contains("\"insertText\"")
+				.contains("Outline\\n\\nChallenge\\nCosts were rising\\n");
 	}
 
-	@Test
-	void shouldSkipTheFillCallWhenThereAreNoTokensTest() {
-		// Given: a granted user and an outline with nothing to substitute
-		RfpOutlineProperties properties = new RfpOutlineProperties();
-		properties.setClerkSecretKey(SECRET);
-		properties.setTemplateDocId("template_doc");
-		ObjectMapper objectMapper = new ObjectMapper();
-		ClerkOAuthClient clerkClient = mock(ClerkOAuthClient.class);
-		when(clerkClient.fetchGrant(SECRET, "user_1", "oauth_google"))
-				.thenReturn(new ClerkOAuthGrant(TOKEN, List.of(DRIVE, DOCS)));
-		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
-		when(workspaceClient.copyDriveFile(TOKEN, "template_doc", "Outline"))
-				.thenReturn(objectMapper.createObjectNode().put("id", "doc_1"));
-		GoogleRfpOutlineDocServiceImpl service = new GoogleRfpOutlineDocServiceImpl(properties,
-				new GoogleGrantServiceImpl(clerkClient),
-				new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient),
-				new TokenReplacementRequestFactoryImpl(objectMapper));
-
-		// When: the doc is created anyway
-		String url = service.createDoc("user_1", "Outline", Map.of());
-
-		// Then: the copy is returned without a pointless batchUpdate round trip
-		assertThat(url).isEqualTo("https://docs.google.com/document/d/doc_1/edit");
-		verify(workspaceClient).copyDriveFile(TOKEN, "template_doc", "Outline");
-		verify(workspaceClient, org.mockito.Mockito.never())
-				.batchUpdateDocument(TOKEN, "doc_1", "{\"requests\":[]}");
-	}
 }

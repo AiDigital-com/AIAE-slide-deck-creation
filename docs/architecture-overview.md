@@ -403,8 +403,8 @@ Two behaviours worth knowing before relying on this in production:
   `false` the pooled connection is never released and the pool starves after
   `max-connections-per-route` calls.
 
-`RFP_OUTLINE_TEMPLATE_DOC_ID` is blank by default, so Google Docs export is
-inoperative until a template is created. The other master templates
+The RFP outline uses no template: the Google Doc is created blank in the
+user's Drive and written from the drafted sections. The master templates
 (`CATEGORY_ANALYSIS_TEMPLATE_ID`, `CATEGORY_ANALYSIS_IN_DEPTH_TEMPLATE_ID`,
 `CASE_STUDY_TEMPLATE_PRESENTATION_ID`, `CASE_STUDY_ONE_PAGE_TEMPLATE_ID`,
 `ONE_PAGER_TEMPLATE_ID`) default to the canonical file ids in

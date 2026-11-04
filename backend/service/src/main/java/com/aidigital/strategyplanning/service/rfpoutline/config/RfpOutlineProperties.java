@@ -12,16 +12,6 @@ import org.springframework.stereotype.Component;
 public class RfpOutlineProperties {
 
 	/**
-	 * URL of the tokenized Google Doc template used for RFP outline doc generation.
-	 */
-	private String templateUrl;
-
-	/**
-	 * File ID of the tokenized Google Doc master template copied for each RFP outline.
-	 */
-	private String templateDocId;
-
-	/**
 	 * Clerk secret key used to fetch the user's Google OAuth access token for Drive/Docs calls.
 	 */
 	private String clerkSecretKey;
@@ -45,22 +35,6 @@ public class RfpOutlineProperties {
 	 * Maximum number of source documents accepted per auto-draft request.
 	 */
 	private int maxSourceFiles = 10;
-
-	public String getTemplateUrl() {
-		return templateUrl;
-	}
-
-	public void setTemplateUrl(String templateUrl) {
-		this.templateUrl = templateUrl;
-	}
-
-	public String getTemplateDocId() {
-		return templateDocId;
-	}
-
-	public void setTemplateDocId(String templateDocId) {
-		this.templateDocId = templateDocId;
-	}
 
 	public String getClerkSecretKey() {
 		return clerkSecretKey;
