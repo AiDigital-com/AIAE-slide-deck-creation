@@ -11,6 +11,7 @@ import com.aidigital.strategyplanning.service.onepager.models.OnePagerSpotlightC
 import com.aidigital.strategyplanning.service.onepager.models.OnePagerStat;
 import com.aidigital.strategyplanning.service.onepager.services.impl.OnePagerAssemblyServiceImpl;
 import com.aidigital.strategyplanning.service.onepager.services.impl.OnePagerCapabilityCardsModuleComposer;
+import com.aidigital.strategyplanning.service.onepager.services.impl.OnePagerGroupFlattenerImpl;
 import com.aidigital.strategyplanning.service.onepager.services.impl.OnePagerHeaderComposerImpl;
 import com.aidigital.strategyplanning.service.onepager.services.impl.OnePagerImageTextModuleComposer;
 import com.aidigital.strategyplanning.service.onepager.services.impl.OnePagerImpactStatsModuleComposer;
@@ -92,7 +93,8 @@ public final class OnePagerFixtures {
 		OnePagerShapeEditorImpl shapes = new OnePagerShapeEditorImpl();
 		OnePagerTextFitterImpl fitter = new OnePagerTextFitterImpl();
 		OnePagerTextWriterImpl writer = new OnePagerTextWriterImpl(fitter);
-		return new OnePagerAssemblyServiceImpl(shapes, new OnePagerHeaderComposerImpl(shapes, writer, fitter),
+		return new OnePagerAssemblyServiceImpl(shapes, new OnePagerGroupFlattenerImpl(),
+				new OnePagerHeaderComposerImpl(shapes, writer, fitter),
 				new OnePagerPageSizerImpl(shapes), List.of(
 						new OnePagerTrackerModuleComposer(shapes, writer),
 						new OnePagerSolutionsModuleComposer(shapes, writer),

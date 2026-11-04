@@ -23,6 +23,10 @@ import java.util.List;
  *
  * <p>All shape ids were read from the master's OOXML and are stable only while the master keeps
  * its structure; re-derive them before relying on this catalog if the master is edited.
+ *
+ * <p>The current master wraps some modules in groups so the designer can move them as one.
+ * Assembly ungroups those wrappers first (see {@code *_WRAPPER_GROUP_IDS}), so every id below
+ * names a top-level shape once that has happened.
  */
 public final class OnePagerLayout {
 
@@ -52,6 +56,15 @@ public final class OnePagerLayout {
 
 	/** 0-based index of the slide holding the photos, insight cards, and milestone banner. */
 	public static final int INSIGHT_SLIDE_INDEX = 5;
+
+	/** Groups on the body slide that wrap the spotlight cards; ungrouped before assembly. */
+	public static final List<Integer> BODY_WRAPPER_GROUP_IDS = List.of(226);
+
+	/** Groups on the KPI slide that wrap the capability cards and the KPI tiles; ungrouped before assembly. */
+	public static final List<Integer> KPI_WRAPPER_GROUP_IDS = List.of(310, 341);
+
+	/** Group on the insight slide that wraps the first insight card's icon; ungrouped before assembly. */
+	public static final List<Integer> INSIGHT_WRAPPER_GROUP_IDS = List.of(382);
 
 	/** Tracker container background (body slide); resized to fit only the used slots. */
 	public static final int TRACKER_CONTAINER_ID = 153;
@@ -92,90 +105,90 @@ public final class OnePagerLayout {
 
 	/** All 4 KPI tile slots (KPI slide), in order. */
 	public static final List<OnePagerKpiSlot> KPI_SLOTS = List.of(
-			new OnePagerKpiSlot(295, 296, 297),
-			new OnePagerKpiSlot(298, 299, 300),
-			new OnePagerKpiSlot(301, 302, 303),
-			new OnePagerKpiSlot(304, 305, 306));
+			new OnePagerKpiSlot(348, 342, 343),
+			new OnePagerKpiSlot(344, 345, 349),
+			new OnePagerKpiSlot(346, 350, 351),
+			new OnePagerKpiSlot(347, 352, 353));
 
 	/** The 3 spotlight-card slots, left to right (body slide). */
 	public static final List<OnePagerSpotlightCardSlot> SPOTLIGHT_CARD_SLOTS = List.of(
-			new OnePagerSpotlightCardSlot(226, List.of(227, 228, 229), 230, 231, List.of(232, 233, 234), 235),
-			new OnePagerSpotlightCardSlot(236, List.of(237, 252, 256, 260, 268, 272, 276, 280), 238, 239,
-					List.of(240, 241, 242), 243),
-			new OnePagerSpotlightCardSlot(244, List.of(245, 284, 285, 286, 287), 246, 247,
-					List.of(248, 249, 250), 251));
+			new OnePagerSpotlightCardSlot(227, List.of(228, 229, 230), 231, 232, List.of(233, 234, 235), 236),
+			new OnePagerSpotlightCardSlot(237, List.of(238, 253, 257, 261, 269, 273, 277, 281), 239, 240,
+					List.of(241, 242, 243), 244),
+			new OnePagerSpotlightCardSlot(245, List.of(246, 285, 286, 287, 288), 247, 248,
+					List.of(249, 250, 251), 252));
 
 	/**
 	 * The 7 KPI-chip groups of spotlight card index 1, left to right, top to bottom. Each group has
 	 * exactly 3 children in a fixed order: a background pill, a short value badge, and a label.
 	 */
-	public static final List<Integer> SPOTLIGHT_KPI_CHIP_GROUP_IDS = List.of(252, 256, 260, 268, 272, 276, 280);
+	public static final List<Integer> SPOTLIGHT_KPI_CHIP_GROUP_IDS = List.of(253, 257, 261, 269, 273, 277, 281);
 
 	/** The 3 stage-name pills of spotlight card index 2, top to bottom. */
-	public static final List<Integer> SPOTLIGHT_STAGE_PILL_IDS = List.of(284, 286, 287);
+	public static final List<Integer> SPOTLIGHT_STAGE_PILL_IDS = List.of(285, 287, 288);
 
 	/** Image placeholder above the image-and-text block's title (KPI slide). */
-	public static final int IMAGE_TEXT_IMAGE_ID = 293;
+	public static final int IMAGE_TEXT_IMAGE_ID = 294;
 
 	/** Section-title shape of the image-and-text block (KPI slide). */
-	public static final int IMAGE_TEXT_LABEL_ID = 307;
+	public static final int IMAGE_TEXT_LABEL_ID = 296;
 
 	/** Paragraph shape of the image-and-text block (KPI slide). */
-	public static final int IMAGE_TEXT_BODY_ID = 308;
+	public static final int IMAGE_TEXT_BODY_ID = 297;
 
 	/** Second, full-width image placeholder below the image-and-text paragraph (KPI slide). */
-	public static final int IMAGE_TEXT_SECONDARY_IMAGE_ID = 309;
+	public static final int IMAGE_TEXT_SECONDARY_IMAGE_ID = 298;
 
 	/** Accent bar of the key-takeaway callout (KPI slide). */
-	public static final int TAKEAWAY_BAR_ID = 310;
+	public static final int TAKEAWAY_BAR_ID = 299;
 
 	/** Text shape of the key-takeaway callout (KPI slide). */
-	public static final int TAKEAWAY_TEXT_ID = 311;
+	public static final int TAKEAWAY_TEXT_ID = 300;
 
 	/** Full-width divider above the impact-stats row (KPI slide). */
-	public static final int STATS_TOP_DIVIDER_ID = 313;
+	public static final int STATS_TOP_DIVIDER_ID = 302;
 
 	/** The 3 impact-stat slots, left to right (KPI slide). */
 	public static final List<OnePagerStatSlot> STAT_SLOTS = List.of(
-			new OnePagerStatSlot(312, 318),
-			new OnePagerStatSlot(314, 319),
-			new OnePagerStatSlot(315, 320));
+			new OnePagerStatSlot(301, 307),
+			new OnePagerStatSlot(303, 308),
+			new OnePagerStatSlot(304, 309));
 
 	/** Vertical divider lines between impact stats, left to right (KPI slide). */
-	public static final List<Integer> STAT_DIVIDER_IDS = List.of(316, 317);
+	public static final List<Integer> STAT_DIVIDER_IDS = List.of(305, 306);
 
 	/** The 3 capability-card slots, left to right (KPI slide). */
 	public static final List<OnePagerCapabilityCardSlot> CAPABILITY_CARD_SLOTS = List.of(
+			new OnePagerCapabilityCardSlot(311, 314, 315, 313, 312, 316, List.of(317, 318, 319), 320),
 			new OnePagerCapabilityCardSlot(321, 324, 325, 323, 322, 326, List.of(327, 328, 329), 330),
-			new OnePagerCapabilityCardSlot(331, 334, 335, 333, 332, 336, List.of(337, 338, 339), 340),
-			new OnePagerCapabilityCardSlot(341, 344, 345, 343, 342, 346, List.of(347, 348, 349), 350));
+			new OnePagerCapabilityCardSlot(331, 334, 335, 333, 332, 336, List.of(337, 338, 339), 340));
 
 	/** Full-bleed photo placeholders above the insight-card row (insight slide), cloned as-is. */
-	public static final List<Integer> PHOTO_IDS = List.of(356, 357);
+	public static final List<Integer> PHOTO_IDS = List.of(361, 362);
 
 	/** The 3 icon-and-insight card slots, left to right (insight slide). */
 	public static final List<OnePagerInsightCardSlot> INSIGHT_CARD_SLOTS = List.of(
-			new OnePagerInsightCardSlot(358, 361, 362, 363, 364, 372, 378),
-			new OnePagerInsightCardSlot(359, 365, 366, 367, 368, 373, 377),
-			new OnePagerInsightCardSlot(360, 375, 369, 370, 371, 374, 376));
+			new OnePagerInsightCardSlot(363, 366, 367, 368, 383, 376, 384),
+			new OnePagerInsightCardSlot(364, 369, 370, 371, 372, 377, 381),
+			new OnePagerInsightCardSlot(365, 379, 373, 374, 375, 378, 380));
 
 	/** Static first-paragraph label always shown above the drafted insight sentence. */
 	public static final String INSIGHT_STATIC_LABEL = "KEY INSIGHT";
 
 	/** Full-bleed photo background of the milestone banner (insight slide). */
-	public static final int MILESTONE_PHOTO_ID = 379;
+	public static final int MILESTONE_PHOTO_ID = 385;
 
 	/** Dark overlay over the milestone banner's photo (insight slide). */
-	public static final int MILESTONE_OVERLAY_ID = 380;
+	public static final int MILESTONE_OVERLAY_ID = 386;
 
 	/** Full-width headline above the milestone banner's numbered steps (insight slide). */
-	public static final int MILESTONE_HEADLINE_ID = 384;
+	public static final int MILESTONE_HEADLINE_ID = 390;
 
 	/** The 3 milestone-banner step slots, left to right (insight slide). */
 	public static final List<OnePagerMilestoneSlot> MILESTONE_SLOTS = List.of(
-			new OnePagerMilestoneSlot(382, 383, 381, 385),
-			new OnePagerMilestoneSlot(387, 388, 386, 389),
-			new OnePagerMilestoneSlot(391, 392, 390, 393));
+			new OnePagerMilestoneSlot(388, 389, 387, 391),
+			new OnePagerMilestoneSlot(393, 394, 392, 395),
+			new OnePagerMilestoneSlot(397, 398, 396, 399));
 
 	private OnePagerLayout() {
 	}

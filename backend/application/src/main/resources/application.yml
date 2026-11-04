@@ -227,7 +227,7 @@ app:
     # One Page Generator master template ("Extended - One Pager Templates"): slides 1-3 are the
     # header/footer shells, slides 4-6 the body-module library. Only ever exported as PPTX, never
     # copied or edited; the assembled page is uploaded as a brand-new Slides file.
-    template-presentation-id: ${ONE_PAGER_TEMPLATE_ID:1Ghth9tTCL685cco2c3Dm2w7Avfi9sBlWYdyFSv25jW4}
+    template-presentation-id: ${ONE_PAGER_TEMPLATE_ID:1_iS7j4gOf-WTito7SgnAtIfIfZXCMPH8as0_kNgR4H4}
     # Clerk secret key — used to fetch the user's Google OAuth token for Drive/Slides.
     clerk-secret-key: ${CLERK_SECRET_KEY:}
     # AI drafting from the guidance brief — blank key means "AI not connected".

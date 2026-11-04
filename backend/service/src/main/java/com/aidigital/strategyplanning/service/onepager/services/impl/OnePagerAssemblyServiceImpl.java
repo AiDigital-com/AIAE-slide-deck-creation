@@ -8,6 +8,7 @@ import com.aidigital.strategyplanning.service.onepager.models.OnePagerDraft;
 import com.aidigital.strategyplanning.service.onepager.models.OnePagerModuleKey;
 import com.aidigital.strategyplanning.service.onepager.models.OnePagerShell;
 import com.aidigital.strategyplanning.service.onepager.services.OnePagerAssemblyService;
+import com.aidigital.strategyplanning.service.onepager.services.OnePagerGroupFlattener;
 import com.aidigital.strategyplanning.service.onepager.services.OnePagerHeaderComposer;
 import com.aidigital.strategyplanning.service.onepager.services.OnePagerModuleComposer;
 import com.aidigital.strategyplanning.service.onepager.services.OnePagerPageSizer;
@@ -42,6 +43,7 @@ public class OnePagerAssemblyServiceImpl implements OnePagerAssemblyService {
 			"Could not assemble the one-pager. Check that the master template is unchanged and try again.";
 
 	private final OnePagerShapeEditor shapes;
+	private final OnePagerGroupFlattener groupFlattener;
 	private final OnePagerHeaderComposer headerComposer;
 	private final OnePagerPageSizer pageSizer;
 	private final Map<OnePagerModuleKey, OnePagerModuleComposer> composers = new EnumMap<>(OnePagerModuleKey.class);
@@ -50,13 +52,16 @@ public class OnePagerAssemblyServiceImpl implements OnePagerAssemblyService {
 	 * Wires the assembly with its collaborators, indexing one composer per module key.
 	 *
 	 * @param shapes          shape editor
+	 * @param groupFlattener  ungroups the master's wrapper groups before shapes are looked up
 	 * @param headerComposer  header composer
 	 * @param pageSizer       page sizer
 	 * @param moduleComposers one composer per body module
 	 */
-	public OnePagerAssemblyServiceImpl(OnePagerShapeEditor shapes, OnePagerHeaderComposer headerComposer,
-			OnePagerPageSizer pageSizer, List<OnePagerModuleComposer> moduleComposers) {
+	public OnePagerAssemblyServiceImpl(OnePagerShapeEditor shapes, OnePagerGroupFlattener groupFlattener,
+			OnePagerHeaderComposer headerComposer, OnePagerPageSizer pageSizer,
+			List<OnePagerModuleComposer> moduleComposers) {
 		this.shapes = shapes;
+		this.groupFlattener = groupFlattener;
 		this.headerComposer = headerComposer;
 		this.pageSizer = pageSizer;
 		moduleComposers.forEach(composer -> composers.put(composer.key(), composer));
@@ -66,6 +71,7 @@ public class OnePagerAssemblyServiceImpl implements OnePagerAssemblyService {
 	public byte[] assemble(byte[] masterPptxBytes, OnePagerShell shell, OnePagerDraft content) {
 		try (XMLSlideShow show = new XMLSlideShow(new ByteArrayInputStream(masterPptxBytes))) {
 			List<XSLFSlide> slides = show.getSlides();
+			ungroupModuleSlides(slides);
 			OnePagerCanvas canvas = new OnePagerCanvas(slides.get(shell.getSlideIndex()));
 			for (int removeId : shell.getRemoveOnUse()) {
 				shapes.removeShape(shapes.findShapeById(canvas.slide(), removeId));
@@ -89,6 +95,21 @@ public class OnePagerAssemblyServiceImpl implements OnePagerAssemblyService {
 			log.error("One-pager assembly failed for shell {}: {}", shell, e.getMessage(), e);
 			throw new AppException(ErrorReason.C003, e, ASSEMBLY_FAILURE);
 		}
+	}
+
+	/**
+	 * Ungroups the wrapper groups on the three module slides. Runs before any shape on them is
+	 * looked up, since POI caches a slide's shape list on first read.
+	 *
+	 * @param slides the master's slides
+	 */
+	void ungroupModuleSlides(List<XSLFSlide> slides) {
+		groupFlattener.flatten(slides.get(OnePagerLayout.BODY_SLIDE_INDEX),
+				OnePagerLayout.BODY_WRAPPER_GROUP_IDS);
+		groupFlattener.flatten(slides.get(OnePagerLayout.KPI_SLIDE_INDEX),
+				OnePagerLayout.KPI_WRAPPER_GROUP_IDS);
+		groupFlattener.flatten(slides.get(OnePagerLayout.INSIGHT_SLIDE_INDEX),
+				OnePagerLayout.INSIGHT_WRAPPER_GROUP_IDS);
 	}
 
 	/**
