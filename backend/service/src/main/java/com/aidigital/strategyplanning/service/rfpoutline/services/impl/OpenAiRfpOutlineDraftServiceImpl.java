@@ -34,9 +34,10 @@ public class OpenAiRfpOutlineDraftServiceImpl implements RfpOutlineDraftService 
 
 	/**
 	 * Long by design: a fully detailed deckOutline is a large completion (up to
-	 * {@code max_completion_tokens=8000}) and can take a while to generate.
+	 * {@code max_completion_tokens=32000}); a measured three-page RFP took about 190 seconds,
+	 * so the previous 240 seconds left almost no headroom for larger briefs.
 	 */
-	private static final Duration CHAT_TIMEOUT = Duration.ofSeconds(240);
+	private static final Duration CHAT_TIMEOUT = Duration.ofSeconds(480);
 
 	private final RfpOutlineProperties properties;
 	private final OpenAiChatClient openAiChatClient;
