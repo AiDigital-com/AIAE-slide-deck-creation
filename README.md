@@ -188,9 +188,8 @@ instance that serves the same assets.
 - Replit Secrets → company secret manager.
 - `.replit` Reserved VM target → company infrastructure.
 - Product owner and tech contact in this README.
-- The RFP outline Google Doc template: `RFP_OUTLINE_TEMPLATE_DOC_ID` ships
-  blank, so Doc export fails with "no template is configured" until the
-  template exists and the variable is set.
+- The RFP outline has no Google Doc template by design: the doc is created
+  blank in the user's Drive and written from the drafted sections.
 - Every Google template (Case Study three-page and one-page, Category Analysis
   Standard and In-Depth, One-Pager master, RFP outline doc) is copied with the
   signed-in user's own Google token. A template that is not shared with that

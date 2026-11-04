@@ -155,6 +155,36 @@ class GoogleTemplateFileGatewayImplTest {
 	}
 
 	@Test
+	void shouldCreateABlankDocumentAndReturnItsIdTest() {
+		// Given: Docs answers the create with a document id
+		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
+		ObjectMapper objectMapper = new ObjectMapper();
+		when(workspaceClient.createDocument(TOKEN, "Acme RFP"))
+				.thenReturn(objectMapper.createObjectNode().put("documentId", "doc_1"));
+
+		// When: a document is created
+		String id = new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient)
+				.createDocument(TOKEN, "Acme RFP", "create the RFP outline doc");
+
+		// Then: the caller gets the id to write into
+		assertThat(id).isEqualTo("doc_1");
+	}
+
+	@Test
+	void shouldRejectADocumentCreateThatReturnsNoIdTest() {
+		// Given: Docs answers the create without a document id
+		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);
+		ObjectMapper objectMapper = new ObjectMapper();
+		when(workspaceClient.createDocument(TOKEN, "Acme RFP")).thenReturn(objectMapper.createObjectNode());
+
+		// When-Then: the missing id is an external-call failure, not a broken URL later
+		assertThatThrownBy(() -> new GoogleTemplateFileGatewayImpl(objectMapper, workspaceClient)
+				.createDocument(TOKEN, "Acme RFP", "create the RFP outline doc"))
+				.isInstanceOf(AppException.class)
+				.hasMessageContaining("Google Docs create returned no document ID");
+	}
+
+	@Test
 	void shouldSkipTheCallEntirelyWhenThereIsNothingToReplaceTest() {
 		// Given: no token values to write
 		GoogleWorkspaceClient workspaceClient = mock(GoogleWorkspaceClient.class);

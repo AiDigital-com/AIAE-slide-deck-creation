@@ -14,6 +14,17 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 public interface GoogleTemplateFileGateway {
 
 	/**
+	 * Creates a blank Google Docs document in the user's Drive.
+	 *
+	 * @param accessToken user's Google OAuth access token
+	 * @param title       document title
+	 * @param action      human-readable description of what the call is for, used in error messages
+	 * @return the new document's ID
+	 * @throws AppException with C003 reason when the call fails or returns no document ID
+	 */
+	String createDocument(String accessToken, String title, String action);
+
+	/**
 	 * Copies a tokenized master template into the user's Drive.
 	 *
 	 * @param accessToken    user's Google OAuth access token

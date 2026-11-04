@@ -12,7 +12,7 @@ import com.aidigital.strategyplanning.service.rfpoutline.models.RfpOutlineDraft;
 import com.aidigital.strategyplanning.service.rfpoutline.services.RfpOutlineDraftParser;
 import com.aidigital.strategyplanning.service.rfpoutline.services.RfpOutlineDraftService;
 import com.aidigital.strategyplanning.service.rfpoutline.services.RfpOutlinePromptComposer;
-import com.aidigital.strategyplanning.service.rfpoutline.templates.RfpOutlineTemplateTokens;
+import com.aidigital.strategyplanning.service.rfpoutline.enums.RfpOutlineSection;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -65,8 +65,8 @@ public class OpenAiRfpOutlineDraftServiceImpl implements RfpOutlineDraftService 
 	@Override
 	public Map<String, String> buildTemplateTokenValues(CreateRfpOutlineCommand command) {
 		Map<String, String> values = new LinkedHashMap<>();
-		for (String key : RfpOutlineTemplateTokens.TOKEN_KEYS) {
-			values.put(key, "");
+		for (RfpOutlineSection section : RfpOutlineSection.values()) {
+			values.put(section.getKey(), "");
 		}
 		values.put("client_name", nullToEmpty(command.clientName()));
 		values.put("industry", nullToEmpty(command.industry()));

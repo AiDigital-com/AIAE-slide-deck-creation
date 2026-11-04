@@ -24,6 +24,16 @@ public interface GoogleWorkspaceClient {
 	JsonNode copyDriveFile(String accessToken, String fileId, String name);
 
 	/**
+	 * Creates a blank Google Docs document in the user's Drive.
+	 *
+	 * @param accessToken user's Google OAuth access token
+	 * @param title       document title
+	 * @return the created document as the Docs API returns it, including {@code documentId}
+	 * @throws GoogleApiException when the call fails or the API answers non-2xx
+	 */
+	JsonNode createDocument(String accessToken, String title);
+
+	/**
 	 * Reads a presentation.
 	 *
 	 * @param accessToken    user's Google OAuth access token

@@ -75,6 +75,12 @@ public class GoogleWorkspaceClientImpl implements GoogleWorkspaceClient {
 	}
 
 	@Override
+	public JsonNode createDocument(String accessToken, String title) {
+		String body = objectMapper.createObjectNode().put("title", title).toString();
+		return post(DOCS_API_BASE, DOCS_CLIENT, "/documents", accessToken, body);
+	}
+
+	@Override
 	public JsonNode getPresentation(String accessToken, String presentationId) {
 		return get(SLIDES_API_BASE, SLIDES_CLIENT, "/presentations/" + presentationId, accessToken);
 	}
