@@ -48,6 +48,10 @@ class OnePagerModuleComposersTest {
 
 	private OnePagerAssemblyContext context(XMLSlideShow show, OnePagerDraft content) {
 		List<org.apache.poi.xslf.usermodel.XSLFSlide> slides = show.getSlides();
+		OnePagerGroupFlattenerImpl flattener = new OnePagerGroupFlattenerImpl();
+		flattener.flatten(slides.get(OnePagerLayout.BODY_SLIDE_INDEX), OnePagerLayout.BODY_WRAPPER_GROUP_IDS);
+		flattener.flatten(slides.get(OnePagerLayout.KPI_SLIDE_INDEX), OnePagerLayout.KPI_WRAPPER_GROUP_IDS);
+		flattener.flatten(slides.get(OnePagerLayout.INSIGHT_SLIDE_INDEX), OnePagerLayout.INSIGHT_WRAPPER_GROUP_IDS);
 		return new OnePagerAssemblyContext(new OnePagerCanvas(slides.get(OnePagerShell.BLUE_HEADER.getSlideIndex())),
 				slides.get(OnePagerLayout.BODY_SLIDE_INDEX), slides.get(OnePagerLayout.KPI_SLIDE_INDEX),
 				slides.get(OnePagerLayout.INSIGHT_SLIDE_INDEX), content);

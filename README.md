@@ -151,7 +151,7 @@ tools, with their defaults from `backend/application/src/main/resources/applicat
 | `CATEGORY_ANALYSIS_IN_DEPTH_TEMPLATE_ID` | `1BovwD1sUrLHk6eTjrvKmPLF6L_-M0mOo93YGP1UJ2Ac` | Master In-Depth Category Analysis Slides template (24-slide layout library), copied per deck. |
 | `CASE_STUDY_ONE_PAGE_TEMPLATE_ID` | `1S2ZPNRah7OBlPQVVdssFOCah5uc_oKfrtPjYTg38SW0` | Tokenized One-Page Case Study Slides template, copied per deck. |
 | `CASE_STUDY_PUBLIC_ASSET_BASE_URL` | blank (the address the request arrived on) | Public base URL Google Slides fetches `/case-study-icons/**` from when swapping the One-Page Case Study icons. It affects only that icon swap; the Standard/In-Depth slide images and the donut always use the address the request arrived on. |
-| `ONE_PAGER_TEMPLATE_ID` | `1Ghth9tTCL685cco2c3Dm2w7Avfi9sBlWYdyFSv25jW4` | One Page Generator master ("Extended - One Pager Templates"); exported as PPTX, never copied or edited. |
+| `ONE_PAGER_TEMPLATE_ID` | `1_iS7j4gOf-WTito7SgnAtIfIfZXCMPH8as0_kNgR4H4` | One Page Generator master ("Extended - One Pager Templates"); exported as PPTX, never copied or edited. |
 | `APP_EXTERNAL_GOOGLE_TRANSFER_RESPONSE_TIMEOUT` | `120s` | Response ceiling for Drive PPTX export and upload, which move whole files. |
 | `APP_EXTERNAL_GOOGLE_TRANSIENT_RETRY_ATTEMPTS` | `3` | Total attempts for the Drive PPTX export on Google's transient 5xx answers. The upload is never resent, because a repeated multipart `POST` could create the file twice. |
 
